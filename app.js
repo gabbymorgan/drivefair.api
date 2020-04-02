@@ -3,7 +3,8 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const {emailTransporter} = require("./server/services/communications");
+const { emailTransporter } = require("./server/services/communications");
+const { jwtMiddleware } = require("./server/services/middleware");
 
 const orderRouter = require("./server/routes/order");
 const vendorRouter = require("./server/routes/vendor");

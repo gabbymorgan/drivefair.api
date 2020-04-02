@@ -1,55 +1,65 @@
 const express = require("express");
-const moment = require("moment");
-const Order = require("../models/order");
 const Customer = require("../models/customer");
 const { emailTransporter } = require("../services/communications");
+const { signToken, validateToken } = require("../services/authentication");
+const emailConfirmation = require("../constants/static-pages/email-confirmation");
 
 const router = express.Router();
 
 router
-  .post("/", async (req, res) => {
+  .post("/register", async (req, res) => {
     try {
-      const { order, customerId } = req.body;
-      const newOrder = new Order({ content: order, customerId });
-      const savedOrder = await newOrder.save();
-      const foundCustomer = await Customer.findOne({ customerId });
-      foundCustomer.orders.push(savedOrder._id);
-      res.status(200).json({ savedOrder });
-      await emailTransporter.sendMail({
-        to: process.env.EMAIL_RECIPIENT,
-        subject: `New order from ${customerId}`,
-        text: `customerId: ${customerId}\n\norder: ${order}`
+      const { email, password, firstName, lastName } = req.body;
+      const newCustomer = new Customer({
+        email,
+        password,
+        firstName,
+        lastName
       });
-      await foundCustomer.save();
+      const savedCustomer = await newCustomer.save();
+      const emailConfirmationToken = await signToken(savedCustomer);
+      res.status(200).json({ savedCustomer });
+      await emailTransporter.sendMail({
+        to: email,
+        subject: `Thanks for signing up, ${firstName}!`,
+        html: emailConfirmation.request(
+          "customers",
+          firstName,
+          emailConfirmationToken
+        )
+      });
     } catch (err) {
       console.log(err);
+      res.status(500).send({ err });
     }
   })
-  .get("/mine", async (req, res) => {
+  .post("/login", async (req, res) => {
+    const { email, password } = req.body;
+    const foundCustomer = await Customer.findOne({ email });
+    if (!foundcustomer) {
+      return res
+        .status(401)
+        .json({ message: "Incorrect username and/or password." });
+    }
+    const passwordIsValid = foundCustomer.validatePassword(password);
+    if (!passwordIsValid) {
+      return res
+        .status(401)
+        .json({ message: "Incorrect username and/or password." });
+    }
+    const token = signToken(foundCustomer);
+    res.status(200).json({ token });
+  })
+  .get("/confirmEmail", async (req, res) => {
     try {
       const { token } = req.query;
-      const foundCustomer = await Customer.findOne({ token }).populate("orders");
-      if (!foundCustomer) {
-        return res.status(404).json({ order: "No user found." });
-      }
-      let { orders, lastVisited, visits } = foundCustomer;
-      res.status(200).json({ orders });
-      if (
-        moment()
-          .startOf("day")
-          .isAfter(lastVisited)
-      ) {
-        await emailTransporter.sendMail({
-          to: process.env.EMAIL_RECIPIENT,
-          subject: `${token} returns`,
-          text: `Customer ${token} has returned`
-        });
-      }
-      lastVisited = Date.now();
-      visits.push(lastVisited);
-      await foundCustomer.update({ lastVisited, visits });
+      const validUser = await validateToken(token, Customer);
+      validUser.emailIsConfirmed = true;
+      await validUser.save();
+      res.status(200).send(emailConfirmation.confirmed());
     } catch (err) {
       console.log(err);
+      res.status(500).json({ err });
     }
   });
 

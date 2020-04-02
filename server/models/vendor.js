@@ -1,15 +1,63 @@
 const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
+
+const menuItemSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: { type: String },
+  price: { type: Number, required: true },
+  createdOn: { type: Date, default: Date.now }
+});
 
 const vendorSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true, index: true, maxlength: 64},
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+    maxlength: 64
+  },
   emailIsConfirmed: { type: Boolean, default: false },
-  password: { type: String, required: true, maxlength: 128},
+  password: { type: String, required: true, maxlength: 128 },
+  phoneNumber: { type: Number, required: true },
+  address: {
+    city: String,
+    state: String,
+    street: String,
+    number: Number,
+    unit: Number,
+    zip: Number,
+    latitude: Number,
+    longitude: Number,
+    note: String
+  },
   businessName: { type: String, required: true, unique: true, maxlength: 128 },
-  address: { type: String, required: true, unique: true },
+  menu: [menuItemSchema],
   createdOn: { type: Date, default: Date.now },
   visits: [{ type: Date }],
   lastVisited: { type: Date, default: Date.now },
-  orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }]
+  activeOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }]
 });
 
-module.exports = mongoose.model("Vendor", vendorSchema);
+vendorSchema.methods.validatePassword = async function(password) {
+  return await bcrypt.compare(this.password, password);
+};
+
+vendorSchema.methods.addMenuItem = async function({
+  name,
+  description,
+  price
+}) {
+  const newMenuItem = new MenuItem({ name, description, price });
+  this.menu.push(newMenuItem);
+  await this.save();
+};
+
+vendorSchema.methods.removeMenuItem = async function(id) {
+  this.menu.pull(id);
+  await this.save();
+};
+
+const Vendor = mongoose.model("Vendor", vendorSchema);
+const MenuItem = mongoose.model("MenuItem", menuItemSchema);
+
+module.exports = Vendor;
