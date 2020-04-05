@@ -5,8 +5,8 @@ const customerSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, index: true, maxlength: 64},
   emailIsConfirmed: { type: Boolean, default: false },
   password: { type: String, required: true, maxlength: 128},
-  firstName: { type: String, required: true, maxlength: 64 },
-  lastName: { type: String, required: true, maxlength: 64 },
+  firstName: { type: String, maxlength: 64 },
+  lastName: { type: String, maxlength: 64 },
   phoneNumber: { type: Number, maxlength: 10 },
   address: {
     city: String,
