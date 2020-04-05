@@ -1,10 +1,10 @@
 const express = require("express");
+const bcrypt = require("bcrypt");
 const Customer = require("../models/customer");
 const { emailTransporter } = require("../services/communications");
+const logError = require("../services/errorLog");
 const {
   signToken,
-  signEmailToken,
-  validateToken
 } = require("../services/authentication");
 const emailConfirmation = require("../constants/static-pages/email-confirmation");
 
@@ -30,7 +30,10 @@ router
         address
       });
       const savedCustomer = await newCustomer.save();
-      const emailConfirmationToken = await signEmailToken(savedCustomer);
+      const emailConfirmationToken = await signToken(
+        savedCustomer,
+        "Customer"
+      );
       res.status(200).json({ savedCustomer });
       await emailTransporter.sendMail({
         to: email,
@@ -43,6 +46,7 @@ router
       });
     } catch (err) {
       console.log(err);
+      logError(err);
       res.status(500).send({ err });
     }
   })
@@ -61,35 +65,36 @@ router
           .status(401)
           .json({ message: "Incorrect username and/or password." });
       }
-      const token = await signToken(foundCustomer);
+      const token = await signToken(foundCustomer, "Customer");
       res.status(200).json({ token });
     } catch (err) {
-      console.log(err);
-      res.status(500).json({ err });
+      logError(err, req);
+      res.status(500).send({ err });
     }
   })
   .get("/confirmEmail", async (req, res) => {
     try {
-      const { token } = req.query;
-      const validUser = await validateToken(token, Customer);
-      validUser.emailIsConfirmed = true;
-      await validUser.save();
+      const { user } = req;
+      user.emailIsConfirmed = true;
+      await user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (err) {
-      console.log(err);
-      res.status(500).json({ err });
+      console.log(err); 
+      logError(err);
+      res.status(500).send({ err });
     }
   })
-  .post("/me", async (req, res) => {
+  .get("/me", async (req, res) => {
     try {
-      const { token } = req.body;
-      const validCustomer = await validateToken(token, Customer);
-      if (!validCustomer)
+      const { user } = req;
+      if (!user) {
+        logError({ message: "User not found" }, req);
         return res.status(401).json({ message: "Unauthorized" });
-      res.status(200).json(validCustomer);
+      }
+      res.status(200).json(user);
     } catch (err) {
-      console.log(err);
-      res.status(500).json({ err });
+      logError(err, req);
+      res.status(500).send({ err });
     }
   });
 

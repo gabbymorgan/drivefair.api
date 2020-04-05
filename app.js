@@ -22,18 +22,19 @@ mongoose
     console.log(err);
   });
 
-const server = express();
-server.use(helmet());
-server.use(express.json());
-server.use(cors());
-server.use(
+const app = express();
+app.use(helmet());
+app.use(express.json());
+app.use(cors());
+app.use(
   morgan("method :url :status :res[content-length] - :response-time ms")
 );
-server.use("/customers", customerRouter);
-server.use("/vendors", vendorRouter);
-server.use("/orders", orderRouter);
+app.use(jwtMiddleware);
+app.use("/customers", customerRouter);
+app.use("/vendors", vendorRouter);
+app.use("/orders", orderRouter);
 
-server.get("/", async (req, res) => {
+app.get("/", async (req, res) => {
   res.status(200).json("Hello squirrel");
   await emailTransporter.sendMail({
     to: process.env.EMAIL_RECIPIENT,
@@ -42,6 +43,6 @@ server.get("/", async (req, res) => {
   });
 });
 
-server.listen(process.env.PORT, () => {
+app.listen(process.env.PORT, () => {
   console.log(`LISTENING ON PORT ${process.env.PORT}`);
 });

@@ -31,7 +31,7 @@ router
         phoneNumber
       });
       const savedVendor = await newVendor.save();
-      const emailConfirmationToken = await signEmailToken(savedVendor);
+      const emailConfirmationToken = await signEmailToken(savedVendor, "Vendor");
       res.status(200).json({ savedVendor });
       await emailTransporter.sendMail({
         to: email,
@@ -62,7 +62,7 @@ router
           .status(401)
           .json({ message: "Incorrect username and/or password." });
       }
-      const token = await signToken(foundVendor);
+      const token = await signToken(foundVendor, "Vendor");
       res.status(200).json({ token });
     } catch (err) {
       console.log(err);
@@ -71,13 +71,12 @@ router
   })
   .post("/addMenuItem", async (req, res) => {
     try {
-      const { token, name, description, price } = req.body;
-      const validVendor = await validateToken(token, Vendor);
-      if (!validVendor) {
+      const { name, description, price } = req.body;
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      await validVendor.addMenuItem({ name, description, price });
-      res.status(200).json(validVendor);
+      await req.user.addMenuItem({ name, description, price });
+      res.status(200).json(req.user);
     } catch (err) {
       console.log(err);
       res.status(500).json({ err });
@@ -85,13 +84,12 @@ router
   })
   .post("/removeMenuItem", async (req, res) => {
     try {
-      const { token, menuItemId } = req.body;
-      const validVendor = await validateToken(token, Vendor);
-      if (!validVendor) {
+      const { menuItemId } = req.body;
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      await validVendor.removeMenuItem(menuItemId);
-      res.status(200).json(validVendor);
+      await req.user.removeMenuItem(menuItemId);
+      res.status(200).json(req.user);
     } catch (err) {
       console.log(err);
       res.status(500).json({ err });
@@ -99,10 +97,8 @@ router
   })
   .get("/confirmEmail", async (req, res) => {
     try {
-      const { token } = req.query;
-      const validVendor = await validateToken(token, Vendor);
-      validVendor.emailIsConfirmed = true;
-      await validVendor.save();
+      req.user.emailIsConfirmed = true;
+      await req.user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (err) {
       console.log(err);
