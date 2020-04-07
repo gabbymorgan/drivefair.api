@@ -18,12 +18,11 @@ const vendorSchema = new mongoose.Schema({
   },
   emailIsConfirmed: { type: Boolean, default: false },
   password: { type: String, required: true, maxlength: 128 },
-  phoneNumber: { type: Number, required: true },
+  phoneNumber: { type: String },
   address: {
     city: String,
     state: String,
     street: String,
-    number: Number,
     unit: Number,
     zip: Number,
     latitude: Number,

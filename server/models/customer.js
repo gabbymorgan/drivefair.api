@@ -7,12 +7,11 @@ const customerSchema = new mongoose.Schema({
   password: { type: String, required: true, maxlength: 128},
   firstName: { type: String, maxlength: 64 },
   lastName: { type: String, maxlength: 64 },
-  phoneNumber: { type: Number, maxlength: 10 },
+  phoneNumber: { type: String },
   address: {
     city: String,
     state: String,
     street: String,
-    number: Number,
     unit: Number,
     zip: Number,
     latitude: Number,

@@ -3,9 +3,7 @@ const bcrypt = require("bcrypt");
 const Customer = require("../models/customer");
 const { emailTransporter } = require("../services/communications");
 const logError = require("../services/errorLog");
-const {
-  signToken,
-} = require("../services/authentication");
+const { signToken } = require("../services/authentication");
 const emailConfirmation = require("../constants/static-pages/email-confirmation");
 
 const router = express.Router();
@@ -30,10 +28,7 @@ router
         address
       });
       const savedCustomer = await newCustomer.save();
-      const emailConfirmationToken = await signToken(
-        savedCustomer,
-        "Customer"
-      );
+      const emailConfirmationToken = await signToken(savedCustomer, "Customer");
       res.status(200).json({ savedCustomer });
       await emailTransporter.sendMail({
         to: email,
@@ -79,22 +74,18 @@ router
       await user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (err) {
-      console.log(err); 
+      console.log(err);
       logError(err);
       res.status(500).send({ err });
     }
   })
   .get("/me", async (req, res) => {
     try {
-      const { user } = req;
-      if (!user) {
-        logError({ message: "User not found" }, req);
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      res.status(200).json(user);
+      const profile = req.user;
+      res.status(200).json({ profile });
     } catch (err) {
-      logError(err, req);
-      res.status(500).send({ err });
+      logError(err);
+      console.log(err);
     }
   });
 

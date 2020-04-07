@@ -4,7 +4,6 @@ const Vendor = require("../models/vendor");
 const { emailTransporter } = require("../services/communications");
 const {
   signToken,
-  signEmailToken,
   validateToken
 } = require("../services/authentication");
 const emailConfirmation = require("../constants/static-pages/email-confirmation");
@@ -31,7 +30,7 @@ router
         phoneNumber
       });
       const savedVendor = await newVendor.save();
-      const emailConfirmationToken = await signEmailToken(savedVendor, "Vendor");
+      const emailConfirmationToken = await signToken(savedVendor, "Vendor");
       res.status(200).json({ savedVendor });
       await emailTransporter.sendMail({
         to: email,
@@ -105,6 +104,14 @@ router
       res.status(500).json({ err });
     }
   })
+  .get("/me", async (req, res) => {
+    try {
+      const profile = req.user;
+      res.status(200).json({profile});
+    } catch (err) {
+      console.log(err);
+    }
+  })
   .get("/:vendorId", async (req, res) => {
     try {
       const { vendorId } = req.params;
@@ -123,6 +130,6 @@ router
     } catch (err) {
       console.log(err);
     }
-  });
+  })
 
 module.exports = router;
