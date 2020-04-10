@@ -70,11 +70,11 @@ router
   })
   .post("/addMenuItem", async (req, res) => {
     try {
-      const { name, description, price } = req.body;
+      const { name, description, price, modifications } = req.body;
       if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      await req.user.addMenuItem({ name, description, price });
+      await req.user.addMenuItem({ name, description, price, modifications });
       res.status(200).json(req.user);
     } catch (err) {
       console.log(err);

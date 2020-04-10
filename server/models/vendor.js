@@ -1,11 +1,24 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
+const modificationSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ["multiple", "single"],
+    required: true
+  },
+  name: { type: String, required: true },
+  displayName: { type: String, required: true },
+  options: [{ name: String, price: Number }],
+  default: { type: String }
+});
+
 const menuItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
   price: { type: Number, required: true },
-  createdOn: { type: Date, default: Date.now }
+  createdOn: { type: Date, default: Date.now },
+  modifications: [modificationSchema]
 });
 
 const vendorSchema = new mongoose.Schema({
@@ -44,9 +57,10 @@ vendorSchema.methods.validatePassword = async function(password) {
 vendorSchema.methods.addMenuItem = async function({
   name,
   description,
-  price
+  price,
+  modifications
 }) {
-  const newMenuItem = new MenuItem({ name, description, price });
+  const newMenuItem = new MenuItem({ name, description, price, modifications });
   this.menu.push(newMenuItem);
   await this.save();
 };

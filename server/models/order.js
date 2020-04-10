@@ -8,8 +8,8 @@ const orderItemSchema = new mongoose.Schema({
 const orderSchema = new mongoose.Schema({
   customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
-  items: [orderItemSchema],
-  delivery: Boolean,
+  orderItems: [orderItemSchema],
+  method: { type: String, enums: ["DELIVERY", "PICKUP"], default: "PICKUP" },
   address: {
     city: String,
     state: String,
@@ -23,20 +23,21 @@ const orderSchema = new mongoose.Schema({
   },
   total: Number,
   amountPaid: Number,
-  createdOn: { type: Date, default: Date.now }
+  createdOn: { type: Date, default: Date.now },
+  disposition: { type: String, enums: ["NEW", "PAID", "READY", "CANCELED", "DELIVERED"], default: "NEW" }
 });
 
-orderSchema.methods.addItem = async function(item) {
+orderSchema.methods.addOrderItem = async function(item) {
   await this.items.push(new OrderItem(item));
 };
 
-orderSchema.methods.modifyItem = async function(itemId, key, value) {
+orderSchema.methods.modifyOrderItem = async function(itemId, key, value) {
   const foundItem = await this.items.find({ _id: itemId });
   foundItem[key] = value;
   await this.save();
 };
 
-orderSchema.methods.removeItem = async function(itemId) {
+orderSchema.methods.removeOrderItem = async function(itemId) {
   await this.items.pull(itemId);
 };
 
