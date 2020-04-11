@@ -18,8 +18,8 @@ mongoose
   .then(() => {
     console.log("~~~ connected to db ~~~");
   })
-  .catch(err => {
-    console.log(err);
+  .catch(error => {
+    console.log(error);
   });
 
 const app = express();

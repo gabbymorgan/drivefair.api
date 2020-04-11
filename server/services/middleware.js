@@ -12,8 +12,8 @@ const jwtMiddleware = async (req, res, next) => {
       if (token) req.user = await validateToken(token);
     }
     next();
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    console.log(error);
     next();
   }
 };

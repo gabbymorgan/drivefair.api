@@ -41,9 +41,9 @@ router
           emailConfirmationToken
         )
       });
-    } catch (err) {
-      console.log(err);
-      res.status(500).send({ err });
+    } catch (error) {
+      console.log(error);
+      res.status(500).send({ error });
     }
   })
   .post("/login", async (req, res) => {
@@ -63,9 +63,9 @@ router
       }
       const token = await signToken(foundVendor, "Vendor");
       res.status(200).json({ token });
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ err });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error });
     }
   })
   .post("/addMenuItem", async (req, res) => {
@@ -76,9 +76,9 @@ router
       }
       await req.user.addMenuItem({ name, description, price, modifications });
       res.status(200).json(req.user);
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ err });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error });
     }
   })
   .post("/removeMenuItem", async (req, res) => {
@@ -89,9 +89,9 @@ router
       }
       await req.user.removeMenuItem(menuItemId);
       res.status(200).json(req.user);
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ err });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error });
     }
   })
   .get("/confirmEmail", async (req, res) => {
@@ -99,17 +99,17 @@ router
       req.user.emailIsConfirmed = true;
       await req.user.save();
       res.status(200).send(emailConfirmation.confirmed());
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ err });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error });
     }
   })
   .get("/me", async (req, res) => {
     try {
       const profile = req.user;
       res.status(200).json({profile});
-    } catch (err) {
-      console.log(err);
+    } catch (error) {
+      console.log(error);
     }
   })
   .get("/:vendorId", async (req, res) => {
@@ -117,9 +117,9 @@ router
       const { vendorId } = req.params;
       const foundVendor = await Vendor.findById(vendorId);
       res.status(200).json(foundVendor);
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ err });
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ error });
     }
   })
   .get("/", async (req, res) => {
@@ -127,8 +127,8 @@ router
     try {
       const vendors = await Vendor.find();
       res.status(200).json({ vendors });
-    } catch (err) {
-      console.log(err);
+    } catch (error) {
+      console.log(error);
     }
   })
 

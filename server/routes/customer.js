@@ -39,10 +39,10 @@ router
           emailConfirmationToken
         )
       });
-    } catch (err) {
-      console.log(err);
-      logError(err);
-      res.status(500).send({ err });
+    } catch (error) {
+      console.log(error);
+      logError(error);
+      res.status(500).send({ error });
     }
   })
   .post("/login", async (req, res) => {
@@ -62,9 +62,9 @@ router
       }
       const token = await signToken(foundCustomer, "Customer");
       res.status(200).json({ token });
-    } catch (err) {
-      logError(err, req);
-      res.status(500).send({ err });
+    } catch (error) {
+      logError(error, req);
+      res.status(500).send({ error });
     }
   })
   .get("/confirmEmail", async (req, res) => {
@@ -73,19 +73,19 @@ router
       user.emailIsConfirmed = true;
       await user.save();
       res.status(200).send(emailConfirmation.confirmed());
-    } catch (err) {
-      console.log(err);
-      logError(err);
-      res.status(500).send({ err });
+    } catch (error) {
+      console.log(error);
+      logError(error);
+      res.status(500).send({ error });
     }
   })
   .get("/me", async (req, res) => {
     try {
       const profile = req.user;
       res.status(200).json({ profile });
-    } catch (err) {
-      logError(err);
-      console.log(err);
+    } catch (error) {
+      logError(error);
+      console.log(error);
     }
   });
 

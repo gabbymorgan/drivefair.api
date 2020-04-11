@@ -2,13 +2,14 @@ const mongoose = require("mongoose");
 
 const orderItemSchema = new mongoose.Schema({
   menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem" },
+  price: Number,
   modifications: Object
 });
 
 const orderSchema = new mongoose.Schema({
   customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
-  orderItems: [orderItemSchema],
+  orderItems: [{ type: mongoose.Schema.Types.ObjectId, ref: "OrderItem" }],
   method: { type: String, enums: ["DELIVERY", "PICKUP"], default: "PICKUP" },
   address: {
     city: String,
@@ -21,24 +22,29 @@ const orderSchema = new mongoose.Schema({
     longitude: Number,
     note: String
   },
-  total: Number,
+  total: {type: Number, default: 0},
   amountPaid: Number,
   createdOn: { type: Date, default: Date.now },
-  disposition: { type: String, enums: ["NEW", "PAID", "READY", "CANCELED", "DELIVERED"], default: "NEW" }
+  disposition: {
+    type: String,
+    enums: ["NEW", "PAID", "READY", "CANCELED", "DELIVERED"],
+    default: "NEW"
+  }
 });
 
 orderSchema.methods.addOrderItem = async function(item) {
-  await this.items.push(new OrderItem(item));
-};
-
-orderSchema.methods.modifyOrderItem = async function(itemId, key, value) {
-  const foundItem = await this.items.find({ _id: itemId });
-  foundItem[key] = value;
-  await this.save();
+  const newOrderItem = await new OrderItem({ ...item }).save();
+  this.orderItems.push(newOrderItem);
+  this.total += newOrderItem.price;
+  return await this.save();
 };
 
 orderSchema.methods.removeOrderItem = async function(itemId) {
-  await this.items.pull(itemId);
+  const orderItem = await OrderItem.findById(itemId);
+  await this.orderItems.pull(itemId);
+  this.total -= orderItem.price;
+  await orderItem.remove();
+  return await this.save();
 };
 
 const OrderItem = mongoose.model("OrderItem", orderItemSchema);

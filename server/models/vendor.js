@@ -9,8 +9,8 @@ const modificationSchema = new mongoose.Schema({
   },
   name: { type: String, required: true },
   displayName: { type: String, required: true },
-  options: [{ name: String, price: Number }],
-  default: { type: String }
+  options: Object,
+  defaultOption: String
 });
 
 const menuItemSchema = new mongoose.Schema({
@@ -60,7 +60,12 @@ vendorSchema.methods.addMenuItem = async function({
   price,
   modifications
 }) {
-  const newMenuItem = new MenuItem({ name, description, price, modifications });
+  const newMenuItem = await new MenuItem({
+    name,
+    description,
+    price,
+    modifications
+  }).save();
   this.menu.push(newMenuItem);
   await this.save();
 };

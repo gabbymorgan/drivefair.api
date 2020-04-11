@@ -14,8 +14,8 @@ const validateToken = async (token) => {
     const { email, userType } = jwt.verify(token, JWT_SECRET_KEY).data;
     const foundUser = await models[userType].findOne({ email });
     return foundUser;
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    console.log(error);
     return null;
   }
 };
