@@ -115,7 +115,7 @@ router
   .get("/:vendorId", async (req, res) => {
     try {
       const { vendorId } = req.params;
-      const foundVendor = await Vendor.findById(vendorId);
+      const foundVendor = await Vendor.findById(vendorId).select("-password");
       res.status(200).json(foundVendor);
     } catch (error) {
       console.log(error);
@@ -125,7 +125,7 @@ router
   .get("/", async (req, res) => {
     // refactor before first dozen vendors
     try {
-      const vendors = await Vendor.find();
+      const vendors = await Vendor.find().select("-password");
       res.status(200).json({ vendors });
     } catch (error) {
       console.log(error);

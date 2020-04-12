@@ -1,4 +1,5 @@
 const express = require("express");
+const { createCharge } = require("../services/payment");
 const { emailTransporter } = require("../services/communications");
 const orderComplete = require("../constants/static-pages/order-complete");
 
@@ -27,7 +28,17 @@ router
       await cart.removeOrderItem(orderItemId);
       res.status(200).json({ savedCart: await req.user.getCart() });
     } catch (error) {
-      console.log({error})
+      console.log({ error });
+      res.status(500).json({ error });
+    }
+  })
+  .post("/pay", async (req, res) => {
+    try {
+      const chargedOrder = await req.user.chargeCartToCard(
+        req.body.paymentDetails.token.id
+      );
+      res.status(200).json({ chargedOrder });
+    } catch (error) {
       res.status(500).json({ error });
     }
   })
@@ -35,7 +46,7 @@ router
     try {
       res.status(200).json({ savedCart: await req.user.getCart() });
     } catch (error) {
-      console.log({error})
+      console.log({ error });
       res.status(500).json({ error });
     }
   })

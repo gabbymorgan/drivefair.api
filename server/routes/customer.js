@@ -14,16 +14,14 @@ router
       const {
         email,
         password,
-        firstName,
-        lastName,
+        fullName,
         phoneNumber,
         address
       } = req.body;
       const newCustomer = new Customer({
         email,
         password: await bcrypt.hash(password, 10),
-        firstName,
-        lastName,
+        fullName,
         phoneNumber,
         address
       });
@@ -41,7 +39,7 @@ router
       });
     } catch (error) {
       console.log(error);
-      logError(error);
+      await logError(error);
       res.status(500).send({ error });
     }
   })
@@ -63,7 +61,7 @@ router
       const token = await signToken(foundCustomer, "Customer");
       res.status(200).json({ token });
     } catch (error) {
-      logError(error, req);
+      await logError(error, req);
       res.status(500).send({ error });
     }
   })
@@ -75,7 +73,7 @@ router
       res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {
       console.log(error);
-      logError(error);
+      await logError(error);
       res.status(500).send({ error });
     }
   })
@@ -84,7 +82,7 @@ router
       const profile = req.user;
       res.status(200).json({ profile });
     } catch (error) {
-      logError(error);
+      await logError(error);
       console.log(error);
     }
   });
