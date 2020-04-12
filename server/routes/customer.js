@@ -39,7 +39,7 @@ router
       });
     } catch (error) {
       console.log(error);
-      await logError(error);
+      await logError(error, req, this.name);
       res.status(500).send({ error });
     }
   })
@@ -61,7 +61,7 @@ router
       const token = await signToken(foundCustomer, "Customer");
       res.status(200).json({ token });
     } catch (error) {
-      await logError(error, req);
+      await logError(error, req, this.name);
       res.status(500).send({ error });
     }
   })
@@ -73,7 +73,7 @@ router
       res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {
       console.log(error);
-      await logError(error);
+      await logError(error, req, this.name);
       res.status(500).send({ error });
     }
   })
@@ -82,7 +82,7 @@ router
       const profile = req.user;
       res.status(200).json({ profile });
     } catch (error) {
-      await logError(error);
+      await logError(error, req, this.name);
       console.log(error);
     }
   });
