@@ -1,7 +1,6 @@
 const express = require("express");
-const { createCharge } = require("../services/payment");
-const { emailTransporter } = require("../services/communications");
-const orderComplete = require("../constants/static-pages/order-complete");
+const Vendor = require("../models/vendor");
+const logError = require("../services/errorLog");
 
 const router = express.Router();
 
@@ -47,6 +46,18 @@ router
       res.status(200).json({ savedCart: await req.user.getCart() });
     } catch (error) {
       console.log({ error });
+      res.status(500).json({ error });
+    }
+  })
+  .get("/activeOrders", async (req, res) => {
+    try {
+      const vendorWithOrders = await Vendor.findById(req.user._id).populate(
+        "activeOrders"
+      )
+      res.status(200).json({ activeOrders: vendorWithOrders.activeOrders });
+    } catch (error) {
+      console.log(error);
+      logError(error, req, this.name);
       res.status(500).json({ error });
     }
   })
