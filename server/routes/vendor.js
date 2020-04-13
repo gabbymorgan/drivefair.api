@@ -64,8 +64,8 @@ router
       const token = await signToken(foundVendor, "Vendor");
       res.status(200).json({ token });
     } catch (error) {
-      console.log(error);
-      res.status(500).json({ error });
+      await logError(error, req, this.name);
+      res.status(500).send({ error });
     }
   })
   .post("/addMenuItem", async (req, res) => {

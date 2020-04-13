@@ -8,7 +8,7 @@ const createCharge = (customer, order, paymentToken) => {
       amount: order.total * 100,
       currency: "usd",
       source: paymentToken,
-      description: `Payment by ${customer.fullName} to ${vendor.businessName} - order #${order._id}`,
+      description: `Payment by ${customer.firstName} ${customer.lastName} to ${vendor.businessName} - order #${order._id}`,
       statement_descriptor_suffix: vendor.businessName,
       receipt_email: customer.email
     },

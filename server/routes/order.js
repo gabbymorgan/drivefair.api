@@ -51,9 +51,14 @@ router
   })
   .get("/activeOrders", async (req, res) => {
     try {
-      const vendorWithOrders = await Vendor.findById(req.user._id).populate(
-        "activeOrders"
-      )
+      const vendorWithOrders = await Vendor.findById(req.user._id).populate({
+        path: "activeOrders",
+        populate: {
+          path: "customer orderItems",
+          select: "-password",
+          populate: "menuItem",
+        },
+      });
       res.status(200).json({ activeOrders: vendorWithOrders.activeOrders });
     } catch (error) {
       console.log(error);
