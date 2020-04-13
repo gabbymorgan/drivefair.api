@@ -14,14 +14,16 @@ router
       const {
         email,
         password,
-        fullName,
+        firstName,
+        lastName,
         phoneNumber,
         address
       } = req.body;
       const newCustomer = new Customer({
         email,
         password: await bcrypt.hash(password, 10),
-        fullName,
+        firstName,
+        lastName,
         phoneNumber,
         address
       });
@@ -80,6 +82,9 @@ router
   .get("/me", async (req, res) => {
     try {
       const profile = req.user;
+      if (!profile) {
+        return res.status(401).json({ message: "Unauthorized." });
+      }
       res.status(200).json({ profile });
     } catch (error) {
       await logError(error, req, this.name);

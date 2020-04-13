@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const Order = require("./order");
+const Vendor = require("./vendor");
+const { emailTransporter } = require("../services/communications");
+const OrderStatus = require("../constants/static-pages/order-status");
 const { createCharge } = require("../services/payment");
 
 const customerSchema = new mongoose.Schema({
@@ -9,11 +12,12 @@ const customerSchema = new mongoose.Schema({
     required: true,
     unique: true,
     index: true,
-    maxlength: 64
+    maxlength: 64,
   },
   emailIsConfirmed: { type: Boolean, default: false },
   password: { type: String, required: true, maxlength: 128 },
-  fullName: { type: String, maxlength: 128 },
+  firstName: { type: String, maxlength: 64 },
+  lastName: { type: String, maxlength: 64 },
   phoneNumber: { type: String },
   address: {
     city: String,
@@ -23,23 +27,23 @@ const customerSchema = new mongoose.Schema({
     zip: Number,
     latitude: Number,
     longitude: Number,
-    note: String
+    note: String,
   },
   createdOn: { type: Date, default: Date.now },
   visits: [{ type: Date }],
   lastVisited: { type: Date, default: Date.now },
   cart: { type: mongoose.Schema.Types.ObjectId, ref: "Order" },
-  activeOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }]
+  activeOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
 });
 
-customerSchema.methods.validatePassword = async function(password) {
+customerSchema.methods.validatePassword = async function (password) {
   return await bcrypt.compare(this.password, password);
 };
 
-customerSchema.methods.createCart = async function(orderItem, vendorId) {
+customerSchema.methods.createCart = async function (orderItem, vendorId) {
   const newCart = new Order({
     customer: this._id,
-    vendor: vendorId
+    vendor: vendorId,
   });
   await newCart.addOrderItem(orderItem);
   this.cart = newCart;
@@ -47,22 +51,30 @@ customerSchema.methods.createCart = async function(orderItem, vendorId) {
   return this.cart;
 };
 
-customerSchema.methods.getCart = async function() {
+customerSchema.methods.getCart = async function () {
   return await Order.findById(this.cart).populate({
     path: "orderItems",
-    populate: { path: "menuItem" }
+    populate: { path: "menuItem" },
   });
 };
 
-customerSchema.methods.chargeCartToCard = async function(paymentToken) {
+customerSchema.methods.chargeCartToCard = async function (paymentToken) {
   try {
-    const cart = await Order.findById(this.cart).populate("vendor");
-    const charge = createCharge(this, cart, paymentToken);
+    const cartWithVendor = await Order.findById(this.cart).populate("vendor");
+    const vendor = await Vendor.findById(cartWithVendor.vendor._id);
+    const charge = createCharge(this, cartWithVendor, paymentToken);
     if (charge.error) return charge;
-    const chargedCart = await cart.update({ disposition: "PAID" });
-    await this.update({
-      cart: null,
-      $addToSet: { activeOrders: chargedCart._id }
+    const chargedCart = await cartWithVendor.update({ disposition: "PAID" });
+    vendor.activeOrders.push(cartWithVendor._id);
+    this.activeOrders.push(cartWithVendor._id);
+    this.cart = null;
+    await vendor.save();
+    await this.save();
+    console.log("made it this far!");
+    await emailTransporter.sendMail({
+      to: this.email,
+      subject: `Your order for ${vendor.businessName}.`,
+      html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
     });
     return chargedCart;
   } catch (error) {
