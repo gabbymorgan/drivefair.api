@@ -2,10 +2,8 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const Vendor = require("../models/vendor");
 const { emailTransporter } = require("../services/communications");
-const {
-  signToken,
-  validateToken
-} = require("../services/authentication");
+const { signToken } = require("../services/authentication");
+const logError = require("../services/errorLog");
 const emailConfirmation = require("../constants/static-pages/email-confirmation");
 
 const router = express.Router();
@@ -19,7 +17,7 @@ router
         businessName,
         address,
         description,
-        phoneNumber
+        phoneNumber,
       } = req.body;
       const newVendor = new Vendor({
         email,
@@ -27,7 +25,7 @@ router
         businessName,
         address,
         description,
-        phoneNumber
+        phoneNumber,
       });
       const savedVendor = await newVendor.save();
       const emailConfirmationToken = await signToken(savedVendor, "Vendor");
@@ -39,7 +37,7 @@ router
           "vendors",
           businessName,
           emailConfirmationToken
-        )
+        ),
       });
     } catch (error) {
       console.log(error);
@@ -107,7 +105,7 @@ router
   .get("/me", async (req, res) => {
     try {
       const profile = req.user;
-      res.status(200).json({profile});
+      res.status(200).json({ profile });
     } catch (error) {
       console.log(error);
     }
@@ -122,6 +120,23 @@ router
       res.status(500).json({ error });
     }
   })
+  .post("/editVendor", async (req, res) => {
+    const vendor = req.user;
+    try {
+      const passwordIsValid = await vendor.validatePassword(req.body.password);
+      if (!passwordIsValid) {
+        const error = { message: "Unauthorized." };
+        logError(error, req);
+        return res.status(401).json({ error });
+      }
+      const savedVendor = await vendor.editVendor(req.body);
+      res.status(200).json({ savedVendor });
+    } catch (error) {
+      console.log(error);
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
   .get("/", async (req, res) => {
     // refactor before first dozen vendors
     try {
@@ -130,6 +145,6 @@ router
     } catch (error) {
       console.log(error);
     }
-  })
+  });
 
 module.exports = router;
