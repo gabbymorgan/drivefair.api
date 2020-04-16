@@ -66,12 +66,31 @@ router
       res.status(500).json({ error });
     }
   })
-  .put("/updatePayment", async (req, res) => {})
-  .post("/fill", async (req, res) => {
-    const { orderId } = req.query;
+  .post("/customerSetOrderMethod", async (req, res) => {
+    try {
+      const customerCart = await req.user.getCart();
+      customerCart.method = req.body.orderMethod;
+      const savedCart = await customerCart.save();
+      res.status(200).json({ savedCart });
+    } catch (error) {
+      console.log(error);
+      logError(error, req, this.name);
+    }
   })
-  .post("/arrive", async (req, res) => {})
-  .post("/deliver", async (req, res) => {
+  .post("/updatePayment", async (req, res) => {})
+  .post("/completeOrder", async (req, res) => {
+    try {
+      const { orderId } = req.query;
+      const order = Order.findById(orderId);
+      const completedOrder = await order.markComplete();
+    } catch (error) {
+      console.log(error);
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/arriveForPickup", async (req, res) => {})
+  .post("/deliverOrder", async (req, res) => {
     const { orderId } = req.query;
   });
 
