@@ -4,7 +4,7 @@ const morgan = require("morgan");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const { emailTransporter } = require("./server/services/communications");
-const { jwtMiddleware } = require("./server/services/middleware");
+const { jwtMiddleware, logActivity } = require("./server/services/middleware");
 
 const orderRouter = require("./server/routes/order");
 const vendorRouter = require("./server/routes/vendor");
@@ -30,6 +30,7 @@ app.use(
   morgan("method :url :status :res[content-length] - :response-time ms")
 );
 app.use(jwtMiddleware);
+app.use(logActivity);
 app.use("/customers", customerRouter);
 app.use("/vendors", vendorRouter);
 app.use("/orders", orderRouter);

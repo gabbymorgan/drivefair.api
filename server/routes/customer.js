@@ -41,7 +41,7 @@ router
       });
     } catch (error) {
       console.log(error);
-      await logError(error, req, this.name);
+      await logError(error, req);
       res.status(500).send({ error });
     }
   })
@@ -63,19 +63,22 @@ router
       const token = await signToken(foundCustomer, "Customer");
       res.status(200).json({ token });
     } catch (error) {
-      await logError(error, req, this.name);
+      await logError(error, req);
       res.status(500).send({ error });
     }
   })
   .get("/confirmEmail", async (req, res) => {
     try {
       const { user } = req;
+      if (!user) {
+        return res.status(401).json({message: "Unauthorized"})
+      }
       user.emailIsConfirmed = true;
       await user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {
       console.log(error);
-      await logError(error, req, this.name);
+      await logError(error, req);
       res.status(500).send({ error });
     }
   })
@@ -87,7 +90,7 @@ router
       }
       res.status(200).json({ profile });
     } catch (error) {
-      await logError(error, req, this.name);
+      await logError(error, req);
       console.log(error);
     }
   });

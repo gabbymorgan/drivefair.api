@@ -94,7 +94,11 @@ router
   })
   .get("/confirmEmail", async (req, res) => {
     try {
-      req.user.emailIsConfirmed = true;
+      const {user} = req;
+      if (!user) {
+        return res.status(401).json({message: "Unauthorized"})
+      }
+      user.emailIsConfirmed = true;
       await req.user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {

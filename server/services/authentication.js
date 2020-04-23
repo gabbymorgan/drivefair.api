@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const { logError } = require("./errorLog");
 const Vendor = require("../models/vendor");
 const Customer = require("../models/customer");
 
@@ -11,12 +12,12 @@ const { JWT_EXPIRY_INTERVAL, JWT_SECRET_KEY } = process.env;
 
 const validateToken = async (token) => {
   try {
-    const { email, userType } = jwt.verify(token, JWT_SECRET_KEY).data;
+    const {data} = jwt.verify(token, JWT_SECRET_KEY);
+    const {email, userType} = data;
     const foundUser = await models[userType].findOne({ email });
     return foundUser;
   } catch (error) {
-    console.log(error);
-    return null;
+    logError(error, req, "validateToken");
   }
 };
 

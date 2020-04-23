@@ -7,6 +7,7 @@ const errorLogSchema = new mongoose.Schema({
   error: Object,
   functionName: String,
   path: String,
+  method: String,
   createdOn: { type: Date, default: Date.now },
 });
 
