@@ -16,6 +16,7 @@ const modificationSchema = new mongoose.Schema({
 const menuItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
+  imageUrl: { type: String, default: "https://via.placeholder.com/200" },
   price: { type: Number, required: true },
   createdOn: { type: Date, default: Date.now },
   modifications: [modificationSchema],
@@ -43,6 +44,7 @@ const vendorSchema = new mongoose.Schema({
     note: String,
   },
   businessName: { type: String, required: true, unique: true, maxlength: 128 },
+  logoUrl: {type: String},
   menu: [menuItemSchema],
   createdOn: { type: Date, default: Date.now },
   visits: [{ type: Date }],
@@ -78,14 +80,14 @@ vendorSchema.methods.removeMenuItem = async function (id) {
 vendorSchema.methods.editVendor = async function (changes) {
   const whiteList = ["email", "businessName", "password", "address", "phoneNumber"];
   whiteList.forEach(async (property) => {
-    if (property === "password" && changes.newPassword) {
-      console.log("this one", property)
-      this[property] = await bcrypt.hash(changes.newPassword, 10);
-    } else if (changes[property]) {
-      console.log("that one", property)
+    if (property !== "password" && changes[property]) {
       this[property] = changes[property];
     }
   });
+  if (changes.newPassword) {
+    this.password = await bcrypt.hash(changes.newPassword, 10);
+  }
+
   return await this.save();
 };
 
