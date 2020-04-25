@@ -70,7 +70,6 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     this.cart = null;
     await vendor.save();
     await this.save();
-    console.log("made it this far!");
     await emailTransporter.sendMail({
       to: this.email,
       subject: `Your order for ${vendor.businessName}.`,
@@ -78,7 +77,6 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     });
     return chargedCart;
   } catch (error) {
-    console.log(error);
     return { error };
   }
 };

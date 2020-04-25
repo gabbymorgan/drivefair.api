@@ -40,7 +40,7 @@ router
         ),
       });
     } catch (error) {
-      console.log(error);
+      await logError(error, req);
       res.status(500).send({ error });
     }
   })
@@ -75,7 +75,7 @@ router
       await req.user.addMenuItem({ name, description, price, modifications });
       res.status(200).json(req.user);
     } catch (error) {
-      console.log(error);
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
@@ -88,21 +88,36 @@ router
       await req.user.removeMenuItem(menuItemId);
       res.status(200).json(req.user);
     } catch (error) {
-      console.log(error);
+      await logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/editMenuItem", async (req, res) => {
+    try {
+      const { menuItemId, changes } = req.body;
+      const vendor = req.user;
+      const menuItem = vendor.menu.find((a) => a._id.toString() === menuItemId);
+      if (!menuItem) {
+        return res.status(401).json({ message: "Unauthorized." });
+      }
+      const savedVendor = await vendor.editMenuItem(menuItem, changes);
+      res.status(200).json({ savedVendor });
+    } catch (error) {
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
   .get("/confirmEmail", async (req, res) => {
     try {
-      const {user} = req;
+      const { user } = req;
       if (!user) {
-        return res.status(401).json({message: "Unauthorized"})
+        return res.status(401).json({ message: "Unauthorized" });
       }
       user.emailIsConfirmed = true;
       await req.user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {
-      console.log(error);
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
@@ -111,7 +126,8 @@ router
       const profile = req.user;
       res.status(200).json({ profile });
     } catch (error) {
-      console.log(error);
+      await logError(error, req);
+      res.status(500).json({ error });
     }
   })
   .get("/:vendorId", async (req, res) => {
@@ -120,7 +136,7 @@ router
       const foundVendor = await Vendor.findById(vendorId).select("-password");
       res.status(200).json(foundVendor);
     } catch (error) {
-      console.log(error);
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
@@ -136,8 +152,7 @@ router
       const savedVendor = await vendor.editVendor(req.body);
       res.status(200).json({ savedVendor });
     } catch (error) {
-      console.log(error);
-      logError(error, req);
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
@@ -147,7 +162,8 @@ router
       const vendors = await Vendor.find().select("-password");
       res.status(200).json({ vendors });
     } catch (error) {
-      console.log(error);
+      await logError(error, req);
+      res.status(500).json({ error });
     }
   });
 

@@ -16,7 +16,14 @@ const modificationSchema = new mongoose.Schema({
 const menuItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
-  imageUrl: { type: String, default: "https://via.placeholder.com/200" },
+  imageUrl: {
+    type: String,
+    default: "HEhQ0C5",
+    validator: function (imageUrl) {
+      return /^\w+$/.test(imageUrl);
+    },
+    message: props => `${props.value} is not a valid imgur URI path!`
+  },
   price: { type: Number, required: true },
   createdOn: { type: Date, default: Date.now },
   modifications: [modificationSchema],
@@ -44,7 +51,7 @@ const vendorSchema = new mongoose.Schema({
     note: String,
   },
   businessName: { type: String, required: true, unique: true, maxlength: 128 },
-  logoUrl: {type: String},
+  logoUrl: { type: String },
   menu: [menuItemSchema],
   createdOn: { type: Date, default: Date.now },
   visits: [{ type: Date }],
@@ -69,16 +76,39 @@ vendorSchema.methods.addMenuItem = async function ({
     modifications,
   }).save();
   this.menu.push(newMenuItem);
-  await this.save();
+  return await this.save();
 };
 
-vendorSchema.methods.removeMenuItem = async function (id) {
-  this.menu.pull(id);
-  await this.save();
+vendorSchema.methods.removeMenuItem = async function (menuItemId) {
+  this.menu.pull(menuItemId);
+  return await this.save();
+};
+
+vendorSchema.methods.editMenuItem = async function (menuItem, changes) {
+  const whiteList = [
+    "name",
+    "description",
+    "imageUrl",
+    "price",
+    "modifications",
+  ];
+  whiteList.forEach((property) => {
+    console.log(changes[property]);
+    if (changes[property]) {
+      menuItem[property] = changes[property];
+    }
+  });
+  return await this.save();
 };
 
 vendorSchema.methods.editVendor = async function (changes) {
-  const whiteList = ["email", "businessName", "password", "address", "phoneNumber"];
+  const whiteList = [
+    "email",
+    "businessName",
+    "password",
+    "address",
+    "phoneNumber",
+  ];
   whiteList.forEach(async (property) => {
     if (property !== "password" && changes[property]) {
       this[property] = changes[property];
@@ -87,7 +117,6 @@ vendorSchema.methods.editVendor = async function (changes) {
   if (changes.newPassword) {
     this.password = await bcrypt.hash(changes.newPassword, 10);
   }
-
   return await this.save();
 };
 

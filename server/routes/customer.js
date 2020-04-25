@@ -40,7 +40,6 @@ router
         )
       });
     } catch (error) {
-      console.log(error);
       await logError(error, req);
       res.status(500).send({ error });
     }

@@ -6,19 +6,24 @@ const router = express.Router();
 
 router
   .post("/addToCart", async (req, res) => {
-    const customer = req.user;
-    const customerCart = await customer.getCart();
-    const { orderItem, vendorId } = req.body;
-    if (
-      !customerCart ||
-      !customerCart.vendor ||
-      vendorId != customerCart.vendor._id
-    ) {
-      await customer.createCart(orderItem, vendorId);
-      return res.status(200).json({ savedCart: await req.user.getCart() });
+    try {
+      const customer = req.user;
+      const customerCart = await customer.getCart();
+      const { orderItem, vendorId } = req.body;
+      if (
+        !customerCart ||
+        !customerCart.vendor ||
+        vendorId != customerCart.vendor._id
+      ) {
+        await customer.createCart(orderItem, vendorId);
+        return res.status(200).json({ savedCart: await req.user.getCart() });
+      }
+      await customerCart.addOrderItem(orderItem);
+      res.status(200).json({ savedCart: await req.user.getCart() });
+    } catch (error) {
+      await logError(error, req);
+      res.status(500).json({ error });
     }
-    await customerCart.addOrderItem(orderItem);
-    res.status(200).json({ savedCart: await req.user.getCart() });
   })
   .post("/removeFromCart", async (req, res) => {
     try {
@@ -27,7 +32,7 @@ router
       await cart.removeOrderItem(orderItemId);
       res.status(200).json({ savedCart: await req.user.getCart() });
     } catch (error) {
-      console.log({ error });
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
@@ -38,6 +43,7 @@ router
       );
       res.status(200).json({ chargedOrder });
     } catch (error) {
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
@@ -45,7 +51,7 @@ router
     try {
       res.status(200).json({ savedCart: await req.user.getCart() });
     } catch (error) {
-      console.log({ error });
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
@@ -61,8 +67,7 @@ router
       });
       res.status(200).json({ activeOrders: vendorWithOrders.activeOrders });
     } catch (error) {
-      console.log(error);
-      logError(error, req, this.name);
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
@@ -73,8 +78,8 @@ router
       const savedCart = await customerCart.save();
       res.status(200).json({ savedCart });
     } catch (error) {
-      console.log(error);
-      logError(error, req, this.name);
+      await logError(error, req);
+      res.status(500).json({ error });
     }
   })
   .post("/updatePayment", async (req, res) => {})
@@ -84,8 +89,7 @@ router
       const order = Order.findById(orderId);
       const completedOrder = await order.markComplete();
     } catch (error) {
-      console.log(error);
-      logError(error, req);
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
