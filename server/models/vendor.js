@@ -22,7 +22,7 @@ const menuItemSchema = new mongoose.Schema({
     validator: function (imageUrl) {
       return /^\w+$/.test(imageUrl);
     },
-    message: props => `${props.value} is not a valid imgur URI path!`
+    message: (props) => `${props.value} is not a valid imgur URI path!`,
   },
   price: { type: Number, required: true },
   createdOn: { type: Date, default: Date.now },
@@ -51,7 +51,14 @@ const vendorSchema = new mongoose.Schema({
     note: String,
   },
   businessName: { type: String, required: true, unique: true, maxlength: 128 },
-  logoUrl: { type: String },
+  logoUrl: {
+    type: String,
+    default: "HEhQ0C5",
+    validator: function (imageUrl) {
+      return /^\w+$/.test(imageUrl);
+    },
+    message: (props) => `${props.value} is not a valid imgur URI path!`,
+  },
   menu: [menuItemSchema],
   createdOn: { type: Date, default: Date.now },
   visits: [{ type: Date }],
