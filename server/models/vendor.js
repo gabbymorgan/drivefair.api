@@ -114,6 +114,7 @@ vendorSchema.methods.editVendor = async function (changes) {
     "businessName",
     "password",
     "address",
+    "logoUrl",
     "phoneNumber",
   ];
   whiteList.forEach(async (property) => {
