@@ -21,6 +21,7 @@ router
       await customerCart.addOrderItem(orderItem);
       res.status(200).json({ savedCart: await req.user.getCart() });
     } catch (error) {
+      console.log({error})
       await logError(error, req);
       res.status(500).json({ error });
     }

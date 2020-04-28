@@ -68,12 +68,19 @@ router
   })
   .post("/addMenuItem", async (req, res) => {
     try {
-      const { name, description, price, modifications } = req.body;
-      if (!req.user) {
+      const { name, description, imageUrl, price, modifications } = req.body;
+      const vendor = req.user;
+      if (!vendor) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      await req.user.addMenuItem({ name, description, price, modifications });
-      res.status(200).json(req.user);
+      const savedVendor = await vendor.addMenuItem({
+        name,
+        description,
+        imageUrl,
+        price,
+        modifications,
+      });
+      res.status(200).json({ savedVendor });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
@@ -82,11 +89,12 @@ router
   .post("/removeMenuItem", async (req, res) => {
     try {
       const { menuItemId } = req.body;
-      if (!req.user) {
+      const vendor = req.user;
+      if (!vendor) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      await req.user.removeMenuItem(menuItemId);
-      res.status(200).json(req.user);
+      const savedVendor = await vendor.removeMenuItem(menuItemId);
+      res.status(200).json({ savedVendor });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });

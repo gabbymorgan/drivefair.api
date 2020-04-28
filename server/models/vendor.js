@@ -1,16 +1,20 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
+const optionSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  price: { type: Number, required: true },
+});
+
 const modificationSchema = new mongoose.Schema({
   type: {
     type: String,
     enum: ["multiple", "single"],
     required: true,
   },
-  name: { type: String, required: true },
-  displayName: { type: String, required: true },
-  options: Object,
-  defaultOption: String,
+  name: { type: String, required: true, unique: true },
+  options: [optionSchema],
+  defaultOption: { type: String },
 });
 
 const menuItemSchema = new mongoose.Schema({
@@ -26,6 +30,7 @@ const menuItemSchema = new mongoose.Schema({
   },
   price: { type: Number, required: true },
   createdOn: { type: Date, default: Date.now },
+  modifiedOn: { type: Date, default: Date.now },
   modifications: [modificationSchema],
 });
 
@@ -70,17 +75,18 @@ vendorSchema.methods.validatePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-vendorSchema.methods.addMenuItem = async function ({
-  name,
-  description,
-  price,
-  modifications,
-}) {
+vendorSchema.methods.addMenuItem = async function (properties) {
+  const modificationsWithoutBlanks = [];
+  properties.modifications.forEach((modification) => {
+    const optionsWithoutBlanks = options.filter((option) => option.name);
+    modification.options = optionsWithoutBlanks;
+    if (modification.name) {
+      modificationsWithoutBlanks.push(modification);
+    }
+  });
   const newMenuItem = await new MenuItem({
-    name,
-    description,
-    price,
-    modifications,
+    ...properties,
+    modifications: modificationsWithoutBlanks,
   }).save();
   this.menu.push(newMenuItem);
   return await this.save();
@@ -105,6 +111,8 @@ vendorSchema.methods.editMenuItem = async function (menuItem, changes) {
       menuItem[property] = changes[property];
     }
   });
+  menuItem.modifiedOn = Date.now();
+  await menuItem.save();
   return await this.save();
 };
 
