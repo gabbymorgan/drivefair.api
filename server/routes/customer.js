@@ -29,7 +29,7 @@ router
       });
       const savedCustomer = await newCustomer.save();
       const emailConfirmationToken = await signToken(savedCustomer, "Customer");
-      res.status(200).json({ savedCustomer });
+      res.status(200).json({ token, profile: savedCustomer, userType: "customer" });
       await emailTransporter.sendMail({
         to: email,
         subject: `Thanks for signing up, ${firstName}!`,
@@ -60,7 +60,7 @@ router
           .json({ message: "Incorrect username and/or password." });
       }
       const token = await signToken(foundCustomer, "Customer");
-      res.status(200).json({ token });
+      res.status(200).json({ token, profile: foundCustomer, userType: "customer" });
     } catch (error) {
       await logError(error, req);
       res.status(500).send({ error });
