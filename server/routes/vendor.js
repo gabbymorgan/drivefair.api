@@ -2,7 +2,11 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const Vendor = require("../models/vendor");
 const { emailTransporter } = require("../services/communications");
-const { signToken, signEmailToken, validateEmailToken } = require("../services/authentication");
+const {
+  signToken,
+  signEmailToken,
+  validateEmailToken,
+} = require("../services/authentication");
 const logError = require("../services/errorLog");
 const emailConfirmation = require("../constants/static-pages/email-confirmation");
 
@@ -28,11 +32,12 @@ router
         phoneNumber,
       });
       const savedVendor = await newVendor.save();
+      const token = await signToken(savedVendor, "Vendor");
       const emailConfirmationToken = await signEmailToken(
         savedVendor,
         "Vendor"
       );
-      res.status(200).json({ success: true });
+      res.status(200).json({ profile: savedVendor, token });
       await emailTransporter.sendMail({
         to: email,
         subject: `Thanks for signing up, ${businessName}!`,
@@ -154,14 +159,10 @@ router
   })
   .post("/editModification", async (req, res) => {
     try {
-      const { menuItemId, changes } = req.body;
+      const { modificationId, changes } = req.body;
       const vendor = req.user;
-      const menuItem = vendor.menu.find((a) => a._id.toString() === menuItemId);
-      if (!menuItem) {
-        return res.status(401).json({ message: "Unauthorized." });
-      }
       const savedModifications = await vendor.editModification(
-        menuItem,
+        modificationId,
         changes
       );
       res.status(200).json({ savedModifications });

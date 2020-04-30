@@ -185,10 +185,11 @@ vendorSchema.methods.removeModification = async function (modification) {
 };
 
 vendorSchema.methods.editModification = async function (
-  modification,
+  modificationId,
   name,
   value
 ) {
+  const modification = await Modification.findById(modificationId);
   modification[name] = value;
   await modification.save();
   const vendorWithModifications = await this.populate(
