@@ -1,6 +1,7 @@
 const ErrorLog = require("../models/errorLog");
 
 const logError = async (err, req, functionName) => {
+  console.log(err)
   const errorString = JSON.stringify(err);
   const { body, path, baseUrl, hostname, user } = req;
   const newErrorLog = new ErrorLog({

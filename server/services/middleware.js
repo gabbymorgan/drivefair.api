@@ -11,7 +11,7 @@ const jwtMiddleware = async (req, res, next) => {
       req.user = await validateToken(req.headers.authorization.split(" ")[1]);
     } else {
       const token = req.query.token || req.body.token;
-      if (token) req.user = await validateToken(token);s
+      if (token) req.user = await validateToken(token);
     }
     next();
   } catch (error) {

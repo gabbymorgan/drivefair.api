@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const Vendor = require("../models/vendor");
 const { emailTransporter } = require("../services/communications");
-const { signToken } = require("../services/authentication");
+const { signToken, signEmailToken, validateEmailToken } = require("../services/authentication");
 const logError = require("../services/errorLog");
 const emailConfirmation = require("../constants/static-pages/email-confirmation");
 
@@ -28,8 +28,11 @@ router
         phoneNumber,
       });
       const savedVendor = await newVendor.save();
-      const emailConfirmationToken = await signToken(savedVendor, "Vendor");
-      res.status(200).json({ token, profile: savedVendor, userType: "vendor" });
+      const emailConfirmationToken = await signEmailToken(
+        savedVendor,
+        "Vendor"
+      );
+      res.status(200).json({ success: true });
       await emailTransporter.sendMail({
         to: email,
         subject: `Thanks for signing up, ${businessName}!`,
@@ -51,7 +54,7 @@ router
       if (!foundVendor) {
         return res
           .status(401)
-          .json({ message: "Incorrect username and/or password." });
+          .send({ message: "Incorrect username and/or password." });
       }
       const passwordIsValid = foundVendor.validatePassword(password);
       if (!passwordIsValid) {
@@ -169,11 +172,11 @@ router
   })
   .get("/confirmEmail", async (req, res) => {
     try {
-      const { user } = req;
-      if (!user) {
+      const isEmailToken = await validateEmailToken(req.query.token);
+      if (!req.user || !isEmailToken) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      user.emailIsConfirmed = true;
+      req.user.emailIsConfirmed = true;
       await req.user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {
@@ -234,6 +237,25 @@ router
       res.status(200).json({ vendors });
     } catch (error) {
       await logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/sendConfirmationEmail", async (req, res) => {
+    try {
+      const vendor = req.user._doc;
+      const emailConfirmationToken = await signEmailToken(vendor, "Vendor");
+      await emailTransporter.sendMail({
+        to: vendor.email,
+        subject: `Thanks for signing up, ${vendor.businessName}!`,
+        html: emailConfirmation.request(
+          "vendors",
+          vendor.businessName,
+          emailConfirmationToken
+        ),
+      });
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.log({ error });
       res.status(500).json({ error });
     }
   });
