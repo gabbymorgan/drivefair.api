@@ -34,7 +34,7 @@ const paidAndBeingMade = (firstName, businessName) => `
       We're working on your order, ${firstName}!
     </h1>
     <p>
-      Your order from ${businessName} is all paid for and being made as you read this!
+      Your order from ${businessName} is in the works at this very moment!
     </p>
   </body>
 </html>

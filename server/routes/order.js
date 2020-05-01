@@ -38,6 +38,16 @@ router
       res.status(500).json({ error });
     }
   })
+  .post("/setTip", async (req, res) => {
+    try {
+      const cart = await req.user.getCart();
+      cart.tip = req.body.tipAmount;
+      const savedCart = await cart.save();
+      res.status(200).json({ savedCart });
+    } catch (error) {
+      logError(error, req);
+    }
+  })
   .post("/pay", async (req, res) => {
     try {
       const chargedOrder = await req.user.chargeCartToCard(

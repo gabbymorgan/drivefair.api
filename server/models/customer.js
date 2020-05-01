@@ -57,10 +57,14 @@ customerSchema.methods.createCart = async function (orderItem, vendorId) {
 
 customerSchema.methods.getCart = async function () {
   try {
-    return await Order.findById(this.cart).populate({
-      path: "orderItems",
-      populate: { path: "menuItem" },
-    });
+    const customerWithcart = await this.populate({
+      path: "cart",
+      populate: {
+        path: "orderItems",
+        populate: { path: "menuItem" },
+      },
+    }).execPopulate();
+    return customerWithcart.cart;
   } catch (error) {
     return { error, functionName: "getCart" };
   }
@@ -74,7 +78,11 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     if (charge.error) {
       return { error: charge.error, functionName: "chargeToCard" };
     }
-    const chargedCart = await cartWithVendor.update({ disposition: "PAID" });
+    const chargedCart = await cartWithVendor.update({
+      disposition: "PAID",
+      chargeId: charge.id,
+      amountPaid: charge.amount
+    });
     vendor.activeOrders.push(cartWithVendor._id);
     this.activeOrders.push(cartWithVendor._id);
     this.cart = null;
