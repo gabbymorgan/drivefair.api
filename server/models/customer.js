@@ -41,21 +41,29 @@ customerSchema.methods.validatePassword = async function (password) {
 };
 
 customerSchema.methods.createCart = async function (orderItem, vendorId) {
-  const newCart = new Order({
-    customer: this._id,
-    vendor: vendorId,
-  });
-  await newCart.addOrderItem(orderItem);
-  this.cart = newCart;
-  await this.save();
-  return this.cart;
+  try {
+    const newCart = new Order({
+      customer: this._id,
+      vendor: vendorId,
+    });
+    await newCart.addOrderItem(orderItem);
+    this.cart = newCart;
+    await this.save();
+    return this.cart;
+  } catch (error) {
+    return { error, functionName: "createCart" };
+  }
 };
 
 customerSchema.methods.getCart = async function () {
-  return await Order.findById(this.cart).populate({
-    path: "orderItems",
-    populate: { path: "menuItem" },
-  });
+  try {
+    return await Order.findById(this.cart).populate({
+      path: "orderItems",
+      populate: { path: "menuItem" },
+    });
+  } catch (error) {
+    return { error, functionName: "getCart" };
+  }
 };
 
 customerSchema.methods.chargeCartToCard = async function (paymentToken) {
@@ -63,7 +71,9 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     const cartWithVendor = await Order.findById(this.cart).populate("vendor");
     const vendor = await Vendor.findById(cartWithVendor.vendor._id);
     const charge = createCharge(this, cartWithVendor, paymentToken);
-    if (charge.error) return charge;
+    if (charge.error) {
+      return { error: charge.error, functionName: "chargeToCard" };
+    }
     const chargedCart = await cartWithVendor.update({ disposition: "PAID" });
     vendor.activeOrders.push(cartWithVendor._id);
     this.activeOrders.push(cartWithVendor._id);
@@ -77,7 +87,7 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     });
     return chargedCart;
   } catch (error) {
-    return { error };
+    return { error, functionName: "chargeCartToCard" };
   }
 };
 

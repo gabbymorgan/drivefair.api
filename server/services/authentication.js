@@ -17,7 +17,7 @@ const validateToken = async (token) => {
     const foundUser = await models[userType].findOne({ email });
     return foundUser;
   } catch (error) {
-    logError(error, req, "validateToken");
+    return { error };
   }
 };
 
@@ -57,5 +57,5 @@ module.exports = {
   validateToken,
   signToken,
   signEmailToken,
-  validateEmailToken
+  validateEmailToken,
 };

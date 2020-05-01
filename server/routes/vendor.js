@@ -283,7 +283,7 @@ router
   })
   .post("/sendConfirmationEmail", async (req, res) => {
     try {
-      const vendor = req.user._doc;
+      const vendor = req.user;
       const emailConfirmationToken = await signEmailToken(vendor, "Vendor");
       await emailTransporter.sendMail({
         to: vendor.email,
