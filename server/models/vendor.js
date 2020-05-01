@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-const logError = require("../services/errorLog");
+const Order = require("./order");
 
 const optionSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -74,6 +74,8 @@ const vendorSchema = new mongoose.Schema({
   visits: [{ type: Date }],
   lastVisited: { type: Date, default: Date.now },
   activeOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
+  completedOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
+  orderHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
 });
 
 vendorSchema.methods.validatePassword = async function (password) {
@@ -232,6 +234,31 @@ vendorSchema.methods.editModification = async function (
   }
 };
 
+vendorSchema.methods.completeOrder = async function (orderId) {
+  try {
+    const foundOrder = await Order.findById(orderId);
+    this.activeOrders.pull(orderId);
+    this.completedOrders.push(orderId);
+    await foundOrder.changeDisposition("COMPLETE");
+    const savedVendor = await this.save();
+    return savedVendor;
+  } catch (error) {
+    return { error, functionName: "completeOrder" };
+  }
+};
+
+vendorSchema.methods.deliverOrder = async function (orderId) {
+  try {
+    const foundOrder = await Order.findById(orderId);
+    this.completedOrders.pull(orderId);
+    this.orderHistory.push(orderId);
+    await foundOrder.changeDisposition("DELIVERED");
+    const savedVendor = await this.save();
+    return savedVendor;
+  } catch (error) {
+    return { error, functionName: "deliverOrder" };
+  }
+};
 const Vendor = mongoose.model("Vendor", vendorSchema);
 const MenuItem = mongoose.model("MenuItem", menuItemSchema);
 const Modification = mongoose.model("Modification", modificationSchema);

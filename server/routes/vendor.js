@@ -227,15 +227,17 @@ router
   })
   .get("/menu", async (req, res) => {
     try {
-      if (!req.user) {
-        return res.status(401).json({ message: "Unauthorized." });
-      }
-      const foundMenu = await req.user.getMenu();
+      let vendor;
+      const { vendorId } = req.query;
+      if (vendorId) vendor = await Vendor.findById(vendorId);
+      else vendor = req.user;
+      const foundMenu = await vendor.getMenu();
       if (foundMenu.error) {
         logError(foundMenu.error, req, foundMenu.functionName);
       }
       res.status(200).json({ foundMenu });
     } catch (error) {
+      logError(error, req);
       res.status(500).json({ error });
     }
   })

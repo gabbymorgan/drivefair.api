@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Payment = require("../services/payment");
 
 const orderItemSchema = new mongoose.Schema({
   menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem" },
@@ -23,13 +24,15 @@ const orderSchema = new mongoose.Schema({
     note: String,
   },
   total: { type: Number, default: 0 },
+  tip: { type: Number, min: 0 },
   amountPaid: Number,
   createdOn: { type: Date, default: Date.now },
   disposition: {
     type: String,
-    enums: ["NEW", "PAID", "READY", "CANCELED", "DELIVERED"],
+    enums: ["NEW", "PAID", "COMPLETE", "CANCELED", "DELIVERED"],
     default: "NEW",
   },
+  chargeId: String,
 });
 
 orderSchema.methods.addOrderItem = async function (item) {
@@ -56,6 +59,28 @@ orderSchema.methods.removeOrderItem = async function (itemId) {
   this.total -= orderItem.price;
   await orderItem.remove();
   return await this.save();
+};
+
+orderSchema.methods.changeDisposition = async function (disposition) {
+  try {
+    this.disposition = disposition;
+    return await this.save();
+  } catch (error) {
+    return { error, functionName: "changeDisposition" };
+  }
+};
+
+orderSchema.methods.refundOrder = async function () {
+  try {
+    const refund = Payment.refundCharge(this.chargeId);
+    if (refund.status !== "succeeded") {
+      return { error: refund };
+    }
+    this.disposition = "CANCELED";
+    return await this.save();
+  } catch (error) {
+    return { error, functioName: "refundOrder" };
+  }
 };
 
 const OrderItem = mongoose.model("OrderItem", orderItemSchema);
