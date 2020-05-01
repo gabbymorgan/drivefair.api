@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const logError = require("../services/errorLog");
 
 const optionSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -14,7 +15,7 @@ const modificationSchema = new mongoose.Schema({
   },
   name: { type: String, required: true },
   options: [optionSchema],
-  defaultOption: { type: String },
+  defaultOptionIndex: { type: Number },
 });
 
 const menuItemSchema = new mongoose.Schema({
@@ -22,7 +23,6 @@ const menuItemSchema = new mongoose.Schema({
   description: { type: String },
   imageUrl: {
     type: String,
-    default: "HEhQ0C5",
     validator: function (imageUrl) {
       return /^\w+$/.test(imageUrl);
     },
@@ -60,7 +60,7 @@ const vendorSchema = new mongoose.Schema({
   businessName: { type: String, required: true, unique: true, maxlength: 128 },
   logoUrl: {
     type: String,
-    default: "HEhQ0C5",
+    default: "e7NBE6u",
     validator: function (imageUrl) {
       return /^\w+$/.test(imageUrl);
     },
@@ -81,71 +81,95 @@ vendorSchema.methods.validatePassword = async function (password) {
 };
 
 vendorSchema.methods.editVendor = async function (changes) {
-  const whiteList = [
-    "email",
-    "businessName",
-    "password",
-    "address",
-    "logoUrl",
-    "phoneNumber",
-  ];
-  whiteList.forEach(async (property) => {
-    if (property !== "password" && changes[property]) {
-      this[property] = changes[property];
+  try {
+    const whiteList = [
+      "email",
+      "businessName",
+      "password",
+      "address",
+      "logoUrl",
+      "phoneNumber",
+    ];
+    whiteList.forEach(async (property) => {
+      if (property !== "password" && changes[property] !== undefined) {
+        this[property] = changes[property];
+      }
+    });
+    if (changes.newPassword) {
+      this.password = await bcrypt.hash(changes.newPassword, 10);
     }
-  });
-  if (changes.newPassword) {
-    this.password = await bcrypt.hash(changes.newPassword, 10);
+    return await this.save();
+  } catch (error) {
+    return { error, functionName: "editVendor" };
   }
-  return await this.save();
 };
 
 vendorSchema.methods.getMenu = async function () {
-  const { menu, modifications } = await this.populate({
-    path: "menu",
-    populate: "modifications",
-  })
-    .populate("modifications")
-    .execPopulate();
-  return { menuItems: menu, modifications };
+  try {
+    const { menu, modifications } = await this.populate({
+      path: "menu",
+      populate: "modifications",
+    })
+      .populate("modifications")
+      .execPopulate();
+    return { menuItems: menu, modifications };
+  } catch (error) {
+    return { error, functionName: "getMenu" };
+  }
 };
 
 vendorSchema.methods.addMenuItem = async function (properties) {
-  const savedMenuItem = await new MenuItem(properties).save();
-  this.menu.push(savedMenuItem._id);
-  const savedVendor = await this.save();
-  await savedVendor
-    .populate({ path: "menu", populate: "modifications" })
-    .execPopulate();
-  return savedVendor.menu;
+  try {
+    const savedMenuItem = await new MenuItem(properties).save();
+    this.menu.push(savedMenuItem._id);
+    const savedVendor = await this.save();
+    await savedVendor
+      .populate({ path: "menu", populate: "modifications" })
+      .execPopulate();
+    return savedVendor.menu;
+  } catch (error) {
+    return { error, functionName: "addMenuItem" };
+  }
 };
 
 vendorSchema.methods.removeMenuItem = async function (menuItemId) {
-  this.menu.pull(menuItemId);
-  const savedVendor = await this.save();
-  await savedVendor.populate({path: "menu", populate: "modifications"}).execPopulate();
-  return savedVendor.menu;
+  try {
+    this.menu.pull(menuItemId);
+    const savedVendor = await this.save();
+    await savedVendor
+      .populate({ path: "menu", populate: "modifications" })
+      .execPopulate();
+    return savedVendor.menu;
+  } catch (error) {
+    return { error, functionName: "removeMenuItem" };
+  }
 };
 
-vendorSchema.methods.editMenuItem = async function (menuItem, changes) {
-  const whiteList = [
-    "name",
-    "description",
-    "imageUrl",
-    "price",
-    "modifications",
-  ];
-  whiteList.forEach((property) => {
-    console.log(changes[property]);
-    if (changes[property]) {
-      menuItem[property] = changes[property];
-    }
-  });
-  menuItem.modifiedOn = Date.now();
-  await menuItem.save();
-  const savedVendor = await this.save();
-  await savedVendor.populate("menu").execPopulate();
-  return savedVendor.menu;
+vendorSchema.methods.editMenuItem = async function (menuItemId, changes) {
+  try {
+    const whiteList = [
+      "name",
+      "description",
+      "imageUrl",
+      "price",
+      "modifications",
+    ];
+    const menuItem = await MenuItem.findById(menuItemId);
+    whiteList.forEach((property) => {
+      if (changes[property] !== undefined) {
+        menuItem[property] = changes[property];
+      }
+    });
+    menuItem.modifiedOn = Date.now();
+    await menuItem.save();
+    const savedVendor = await this.save();
+    await savedVendor
+      .populate({ path: "menu", populate: "modifications" })
+      .execPopulate();
+    return savedVendor.menu;
+  } catch (error) {
+    return { error, functionName: "editMenuItem" };
+  }
 };
 
 vendorSchema.methods.addModification = async function (modification) {
@@ -163,39 +187,49 @@ vendorSchema.methods.addModification = async function (modification) {
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    console.log(error);
-    logError(error, {}, "addModification");
-    return error;
+    return { error, functionName: "addModification" };
   }
 };
 
-vendorSchema.methods.removeModification = async function (modification) {
-  const vendorWithMenu = await Vendor.findById(this._id).populate("menu");
-  const updatedMenu = vendorWithMenu.map(async (menuItem) => {
-    menuItem.modifications.pull(modificationId);
-    await menuItem.save();
-  });
-  await Promise.all(updatedMenu);
-  this.modifications.pull(modificationId);
-  await this.save();
-  const vendorWithModifications = await this.populate(
-    "modifications"
-  ).execPopulate();
-  return vendorWithModifications.modifications;
+vendorSchema.methods.removeModification = async function (modificationId) {
+  try {
+    const vendorWithMenu = await this.populate("menu").execPopulate();
+    const updatedMenu = vendorWithMenu.menu.map(async (menuItem) => {
+      menuItem.modifications.pull(modificationId);
+      await menuItem.save();
+    });
+    await Promise.all(updatedMenu);
+    this.modifications.pull(modificationId);
+    await this.save();
+    const vendorWithModifications = await this.populate(
+      "modifications"
+    ).execPopulate();
+    return vendorWithModifications.modifications;
+  } catch (error) {
+    return { error, functionName: "removeModification" };
+  }
 };
 
 vendorSchema.methods.editModification = async function (
   modificationId,
-  name,
-  value
+  changes
 ) {
-  const modification = await Modification.findById(modificationId);
-  modification[name] = value;
-  await modification.save();
-  const vendorWithModifications = await this.populate(
-    "modifications"
-  ).execPopulate();
-  return vendorWithModifications.modifications;
+  try {
+    const whiteList = ["options", "name", "type", "defaultOptionIndex"];
+    const modification = await Modification.findById(modificationId);
+    whiteList.forEach((property) => {
+      if (changes[property] !== undefined) {
+        modification[property] = changes[property];
+      }
+    });
+    await modification.save();
+    const vendorWithModifications = await this.populate(
+      "modifications"
+    ).execPopulate();
+    return vendorWithModifications.modifications;
+  } catch (error) {
+    return { error, functionName: "editModification" };
+  }
 };
 
 const Vendor = mongoose.model("Vendor", vendorSchema);
