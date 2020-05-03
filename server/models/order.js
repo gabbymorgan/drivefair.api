@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const Payment = require("../services/payment");
 
 const orderItemSchema = new mongoose.Schema({
   menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem" },
@@ -38,13 +37,13 @@ const orderSchema = new mongoose.Schema({
 orderSchema.methods.addOrderItem = async function (item) {
   item.price = item.menuItem.price;
   item.modifications.forEach((modification) => {
-    const { selectedOptions } = modification;
-    if (Array.isArray(selectedOptions)) {
-      modification.selectedOptions.forEach((option) => {
+    const { options } = modification;
+    if (Array.isArray(options)) {
+      modification.options.forEach((option) => {
         item.price += Number(option.price);
       });
     } else {
-      item.price += Number(selectedOptions.price);
+      item.price += Number(options.price);
     }
   });
   const newOrderItem = await new OrderItem({ ...item }).save();
@@ -70,18 +69,6 @@ orderSchema.methods.changeDisposition = async function (disposition) {
   }
 };
 
-orderSchema.methods.refundOrder = async function () {
-  try {
-    const refund = Payment.refundCharge(this.chargeId);
-    if (refund.status !== "succeeded") {
-      return { error: refund };
-    }
-    this.disposition = "CANCELED";
-    return await this.save();
-  } catch (error) {
-    return { error, functioName: "refundOrder" };
-  }
-};
 
 const OrderItem = mongoose.model("OrderItem", orderItemSchema);
 const Order = mongoose.model("Order", orderSchema);

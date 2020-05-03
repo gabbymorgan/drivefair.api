@@ -1,6 +1,4 @@
 const express = require("express");
-const Vendor = require("../models/vendor");
-const Order = require("../models/order");
 const logError = require("../services/errorLog");
 
 const router = express.Router();
@@ -22,7 +20,6 @@ router
       await customerCart.addOrderItem(orderItem);
       res.status(200).json({ savedCart: await req.user.getCart() });
     } catch (error) {
-      console.log({ error });
       await logError(error, req);
       res.status(500).json({ error });
     }
@@ -53,6 +50,10 @@ router
       const chargedOrder = await req.user.chargeCartToCard(
         req.body.paymentDetails.token.id
       );
+      if (chargedOrder.error) {
+        logError(chargedOrder.error, req, chargedOrder.functionName);
+        return res.status(500).json({ error: chargedOrder.error });
+      }
       res.status(200).json({ chargedOrder });
     } catch (error) {
       await logError(error, req);
@@ -67,17 +68,31 @@ router
       res.status(500).json({ error });
     }
   })
+  .post("/customerSetOrderMethod", async (req, res) => {
+    try {
+      const customerCart = await req.user.getCart();
+      customerCart.method = req.body.orderMethod;
+      const savedCart = await customerCart.save();
+      res.status(200).json({ savedCart });
+    } catch (error) {
+      await logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+
   .get("/activeOrders", async (req, res) => {
     try {
-      const vendorWithOrders = await Vendor.findById(req.user._id).populate({
-        path: "activeOrders",
-        populate: {
-          path: "customer orderItems",
-          select: "-password",
-          populate: "menuItem",
-        },
-      });
-      res.status(200).json({ activeOrders: vendorWithOrders.activeOrders });
+      const userWithOrders = await req.user
+        .populate({
+          path: "activeOrders",
+          populate: {
+            path: "vendor customer orderItems",
+            select: "-password",
+            populate: "menuItem",
+          },
+        })
+        .execPopulate();
+      res.status(200).json({ activeOrders: userWithOrders.activeOrders });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
@@ -85,17 +100,17 @@ router
   })
   .get("/completedOrders", async (req, res) => {
     try {
-      const vendorWithOrders = await Vendor.findById(req.user._id).populate({
-        path: "completedOrders",
-        populate: {
-          path: "customer orderItems",
-          select: "-password",
-          populate: "menuItem",
-        },
-      });
-      res
-        .status(200)
-        .json({ completedOrders: vendorWithOrders.completedOrders });
+      const userWithOrders = await req.user
+        .populate({
+          path: "completedOrders",
+          populate: {
+            path: "vendor customer orderItems",
+            select: "-password",
+            populate: "menuItem",
+          },
+        })
+        .execPopulate();
+      res.status(200).json({ completedOrders: userWithOrders.completedOrders });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
@@ -103,26 +118,17 @@ router
   })
   .get("/orderHistory", async (req, res) => {
     try {
-      const vendorWithOrders = await Vendor.findById(req.user._id).populate({
-        path: "orderHistory",
-        populate: {
-          path: "customer orderItems",
-          select: "-password",
-          populate: "menuItem",
-        },
-      });
-      res.status(200).json({ orderHistory: vendorWithOrders.orderHistory });
-    } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
-    }
-  })
-  .post("/customerSetOrderMethod", async (req, res) => {
-    try {
-      const customerCart = await req.user.getCart();
-      customerCart.method = req.body.orderMethod;
-      const savedCart = await customerCart.save();
-      res.status(200).json({ savedCart });
+      const userWithOrders = await req.user
+        .populate({
+          path: "orderHistory",
+          populate: {
+            path: "vendor customer orderItems",
+            select: "-password",
+            populate: "menuItem",
+          },
+        })
+        .execPopulate();
+      res.status(200).json({ orderHistory: userWithOrders.orderHistory });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
@@ -164,8 +170,7 @@ router
   .post("/refundOrder", async (req, res) => {
     try {
       const { orderId } = req.body;
-      const order = await Order.findById(orderId);
-      const updatedVendor = await order.refundOrder();
+      const updatedVendor = await req.user.refundOrder(orderId);
       if (updatedVendor.error) {
         logError(updatedVendor.error, req, updatedVendor.functionName);
       }

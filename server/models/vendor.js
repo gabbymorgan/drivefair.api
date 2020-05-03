@@ -1,40 +1,10 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const Order = require("./order");
-
-const optionSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  price: { type: Number, required: true, default: 0 },
-});
-
-const modificationSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ["multiple", "single"],
-    required: true,
-  },
-  name: { type: String, required: true },
-  options: [optionSchema],
-  defaultOptionIndex: { type: Number },
-});
-
-const menuItemSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  description: { type: String },
-  imageUrl: {
-    type: String,
-    validator: function (imageUrl) {
-      return /^\w+$/.test(imageUrl);
-    },
-    message: (props) => `${props.value} is not a valid imgur URI path!`,
-  },
-  price: { type: Number, required: true },
-  createdOn: { type: Date, default: Date.now },
-  modifiedOn: { type: Date, default: Date.now },
-  modifications: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "Modification" },
-  ],
-});
+const Customer = require("./customer");
+const Modification = require("./modification");
+const MenuItem = require("./menuItem");
+const Payment = require("../services/payment");
 
 const vendorSchema = new mongoose.Schema({
   email: {
@@ -180,7 +150,6 @@ vendorSchema.methods.addModification = async function (modification) {
       (option) => option.name
     );
     modification.options = optionsWithoutBlanks;
-    console.log(modification);
     const newModification = await new Modification(modification).save();
     this.modifications.push(newModification._id);
     await this.save();
@@ -236,11 +205,21 @@ vendorSchema.methods.editModification = async function (
 
 vendorSchema.methods.completeOrder = async function (orderId) {
   try {
-    const foundOrder = await Order.findById(orderId);
+    const foundOrder = await Order.findById(orderId).populate("customer");
+    const { customer } = foundOrder;
+    customer.activeOrders.pull(orderId);
+    customer.completedOrders.push(orderId);
     this.activeOrders.pull(orderId);
     this.completedOrders.push(orderId);
     await foundOrder.changeDisposition("COMPLETE");
+    await customer.save();
     const savedVendor = await this.save();
+    await savedVendor
+      .populate({
+        path: "activeOrders completedOrders",
+        populate: "orderItems",
+      })
+      .execPopulate();
     return savedVendor;
   } catch (error) {
     return { error, functionName: "completeOrder" };
@@ -249,18 +228,63 @@ vendorSchema.methods.completeOrder = async function (orderId) {
 
 vendorSchema.methods.deliverOrder = async function (orderId) {
   try {
-    const foundOrder = await Order.findById(orderId);
+    const foundOrder = await Order.findById(orderId).populate("customer");
+    const { customer } = foundOrder;
+    customer.completedOrders.pull(orderId);
+    customer.orderHistory.push(orderId);
     this.completedOrders.pull(orderId);
     this.orderHistory.push(orderId);
     await foundOrder.changeDisposition("DELIVERED");
+    await customer.save();
     const savedVendor = await this.save();
+    await savedVendor
+      .populate({
+        path: "completedOrders orderHistory",
+        populate: "orderItems",
+      })
+      .execPopulate();
     return savedVendor;
   } catch (error) {
     return { error, functionName: "deliverOrder" };
   }
 };
-const Vendor = mongoose.model("Vendor", vendorSchema);
-const MenuItem = mongoose.model("MenuItem", menuItemSchema);
-const Modification = mongoose.model("Modification", modificationSchema);
 
-module.exports = Vendor;
+vendorSchema.methods.refundOrder = async function (orderId) {
+  try {
+    const order = await Order.findById(orderId);
+    const customer = await Customer.findById(order.customer);
+    if (order.vendor.toString() !== this._id.toString()) {
+      return { error: { message: "Unauthorized" } };
+    }
+    const charge = await Payment.refundCharge(order.chargeId);
+    if (charge.error) {
+      return { error: charge.error, functionName: "chargeToCard" };
+    }
+    const refundedOrder = await order.update({
+      disposition: "CANCELED",
+    });
+    customer.activeOrders.pull(order._id);
+    customer.completedOrders.pull(order._id);
+    customer.orderHisory.push(order._id);
+    this.activeOrders.pull(order._id);
+    this.completedOrders.pull(order._id);
+    this.orderHisory.push(order._id);
+    await customer.save();
+    await this.save();
+    await emailTransporter.sendMail({
+      to: this.email,
+      subject: `Your order for ${vendor.businessName}.`,
+      html: "Refunded",
+    });
+    await emailTransporter.sendMail({
+      to: vendor.email,
+      subject: `Order refunded!`,
+      html: "Refunded",
+    });
+    return refundedOrder;
+  } catch (error) {
+    return { error, functionName: "chargeCartToCard" };
+  }
+};
+
+module.exports = mongoose.model("Vendor", vendorSchema);

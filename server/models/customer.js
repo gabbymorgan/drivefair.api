@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const Order = require("./order");
-const Vendor = require("./vendor");
 const { emailTransporter } = require("../services/communications");
 const OrderStatus = require("../constants/static-pages/order-status");
 const { createCharge } = require("../services/payment");
@@ -34,6 +33,8 @@ const customerSchema = new mongoose.Schema({
   lastVisited: { type: Date, default: Date.now },
   cart: { type: mongoose.Schema.Types.ObjectId, ref: "Order" },
   activeOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
+  completedOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
+  orderHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
 });
 
 customerSchema.methods.validatePassword = async function (password) {
@@ -72,25 +73,36 @@ customerSchema.methods.getCart = async function () {
 
 customerSchema.methods.chargeCartToCard = async function (paymentToken) {
   try {
-    const cartWithVendor = await Order.findById(this.cart).populate("vendor");
-    const vendor = await Vendor.findById(cartWithVendor.vendor._id);
-    const charge = createCharge(this, cartWithVendor, paymentToken);
+    const cart = await Order.findById(this.cart);
+    const cartWithVendor = await cart.populate("vendor").execPopulate();
+    const { vendor } = cartWithVendor;
+    const charge = await createCharge(
+      this,
+      cartWithVendor,
+      vendor,
+      paymentToken
+    );
     if (charge.error) {
       return { error: charge.error, functionName: "chargeToCard" };
     }
-    const chargedCart = await cartWithVendor.update({
+    const chargedCart = await cart.update({
       disposition: "PAID",
       chargeId: charge.id,
-      amountPaid: charge.amount
+      amountPaid: charge.amount,
     });
-    vendor.activeOrders.push(cartWithVendor._id);
-    this.activeOrders.push(cartWithVendor._id);
+    vendor.activeOrders.push(cart._id);
+    this.activeOrders.push(cart._id);
     this.cart = null;
     await vendor.save();
     await this.save();
     await emailTransporter.sendMail({
       to: this.email,
       subject: `Your order for ${vendor.businessName}.`,
+      html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
+    });
+    await emailTransporter.sendMail({
+      to: vendor.email,
+      subject: `You have a new order for ${cart.method}!`,
       html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
     });
     return chargedCart;

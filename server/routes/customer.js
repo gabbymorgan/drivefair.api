@@ -101,7 +101,7 @@ router
       res.status(200).json({ profile });
     } catch (error) {
       await logError(error, req);
-      console.log(error);
+      res.status(500).json({ error });
     }
   })
   .post("/sendConfirmationEmail", async (req, res) => {
@@ -119,7 +119,7 @@ router
       });
       res.status(200).json({ success: true });
     } catch (error) {
-      console.log({ error });
+      await logError(error, req);
       res.status(500).json({ error });
     }
   });

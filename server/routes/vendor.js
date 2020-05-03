@@ -95,7 +95,6 @@ router
       }
       res.status(200).json({ menuItems });
     } catch (error) {
-      console.log({ error });
       await logError(error, req);
       res.status(500).json({ error });
     }
@@ -298,9 +297,8 @@ router
       });
       res.status(200).json({ success: true });
     } catch (error) {
-      console.log({ error });
-      res.status(500).json({ error });
-    }
+      await logError(error, req);
+      res.status(500).json({ error });    }
   });
 
 module.exports = router;
