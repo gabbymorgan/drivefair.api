@@ -12,13 +12,19 @@ const customerRouter = require("./server/routes/customer");
 
 mongoose
   .connect(
-    `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0-h73bz.mongodb.net/delivery?retryWrites=true&w=majority`,
+    "mongodb+srv://" +
+      process.env.DB_USER +
+      ":" +
+      process.env.DB_PASS +
+      "@cluster0-h73bz.mongodb.net/" +
+      process.env.DB_CLUSTER +
+      "?retryWrites=true&w=majority",
     { useNewUrlParser: true, useUnifiedTopology: true }
   )
   .then(() => {
     console.log("~~~ connected to db ~~~");
   })
-  .catch(error => {
+  .catch((error) => {
     console.log(error);
   });
 
@@ -26,9 +32,7 @@ const app = express();
 app.use(helmet());
 app.use(express.json());
 app.use(cors());
-app.use(
-  morgan("method :url :status :res[content-length] - :response-time ms")
-);
+app.use(morgan("method :url :status :res[content-length] - :response-time ms"));
 app.use(jwtMiddleware);
 app.use(logActivity);
 app.use("/customers", customerRouter);
@@ -41,7 +45,7 @@ app.get("/", async (req, res) => {
     to: process.env.EMAIL_RECIPIENT,
     from: '"Denton Delivers", gabby@gabriellapelton.com',
     subject: "Direct API accesss",
-    text: "Someone is hitting up your API directly"
+    text: "Someone is hitting up your API directly",
   });
 });
 

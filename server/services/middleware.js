@@ -23,12 +23,19 @@ const jwtMiddleware = async (req, res, next) => {
 
 const logActivity = async (req, res, next) => {
   try {
+    let userId;
+    const { user, body, hostname, path, method } = req;
+    if (user) {
+      user.lastVisited = Date.now();
+      await user.save();
+      userId = user._id;
+    }
     const newActivity = new ActivityLog({
-      body: req.body,
-      hostname: req.hostname,
-      user: req.user,
-      path: req.path,
-      method: req.method
+      body,
+      hostname,
+      userId,
+      path,
+      method,
     });
     await newActivity.save();
     next();
@@ -41,5 +48,5 @@ const logActivity = async (req, res, next) => {
 
 module.exports = {
   jwtMiddleware,
-  logActivity
+  logActivity,
 };
