@@ -39,6 +39,7 @@ app.get("/", async (req, res) => {
   res.status(200).json("Hello squirrel");
   await emailTransporter.sendMail({
     to: process.env.EMAIL_RECIPIENT,
+    from: '"Denton Delivers", gabby@gabriellapelton.com',
     subject: "Direct API accesss",
     text: "Someone is hitting up your API directly"
   });

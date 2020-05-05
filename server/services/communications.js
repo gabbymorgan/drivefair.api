@@ -1,16 +1,21 @@
 const nodemailer = require("nodemailer");
 
+var emailTransporter = nodemailer.createTransport({
+  service: "Godaddy",
+  host: "smtpout.secureserver.net",
+  secureConnection: false,
+  port: 465,
 
-const emailTransporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
+    pass: process.env.EMAIL_PASSWORD,
+  },
+
+  tls: {
+    ciphers: "SSLv3",
+  },
 });
 
 module.exports = {
-  emailTransporter
-}
+  emailTransporter,
+};

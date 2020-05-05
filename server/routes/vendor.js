@@ -275,7 +275,9 @@ router
   .get("/", async (req, res) => {
     // refactor before first dozen vendors
     try {
-      const vendors = await Vendor.find().select("-password");
+      const vendors = await Vendor.find({ emailIsConfirmed: true }).select(
+        "-password"
+      );
       res.status(200).json({ vendors });
     } catch (error) {
       await logError(error, req);
@@ -298,7 +300,8 @@ router
       res.status(200).json({ success: true });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });    }
+      res.status(500).json({ error });
+    }
   });
 
 module.exports = router;
