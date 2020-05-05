@@ -97,11 +97,13 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     await this.save();
     await emailTransporter.sendMail({
       to: this.email,
+      from: '"Denton Delivers", gabby@gabriellapelton.com',
       subject: `Your order for ${vendor.businessName}.`,
       html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
     });
     await emailTransporter.sendMail({
       to: vendor.email,
+      from: '"Denton Delivers", gabby@gabriellapelton.com',
       subject: `You have a new order for ${cart.method}!`,
       html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
     });

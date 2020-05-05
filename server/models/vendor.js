@@ -273,11 +273,13 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     await this.save();
     await emailTransporter.sendMail({
       to: this.email,
+      from: '"Denton Delivers", gabby@gabriellapelton.com',
       subject: `Your order for ${vendor.businessName}.`,
       html: "Refunded",
     });
     await emailTransporter.sendMail({
       to: vendor.email,
+      from: '"Denton Delivers", gabby@gabriellapelton.com',
       subject: `Order refunded!`,
       html: "Refunded",
     });

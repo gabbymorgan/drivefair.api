@@ -40,6 +40,7 @@ router
       res.status(200).json({ profile: savedVendor, token });
       await emailTransporter.sendMail({
         to: email,
+        from: '"Denton Delivers", gabby@gabriellapelton.com',
         subject: `Thanks for signing up, ${businessName}!`,
         html: emailConfirmation.request(
           "vendors",
@@ -290,6 +291,7 @@ router
       const emailConfirmationToken = await signEmailToken(vendor, "Vendor");
       await emailTransporter.sendMail({
         to: vendor.email,
+        from: '"Denton Delivers", gabby@gabriellapelton.com',
         subject: `Thanks for signing up, ${vendor.businessName}!`,
         html: emailConfirmation.request(
           "vendors",
