@@ -127,13 +127,13 @@ router
   })
   .post("/addAddress", async (req, res) => {
     try {
-      const updatedCustomer = await req.user.addAddress(req.body);
-      if (updatedCustomer.error) {
-        const { error, functionName } = updatedCustomer;
+      const addresses = await req.user.addAddress(req.body);
+      if (addresses.error) {
+        const { error, functionName } = addresses;
         logError(error, req, functionName);
         return res.status(500).json(error);
       }
-      res.status(200).json({ updatedCustomer });
+      res.status(200).json({ addresses });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
