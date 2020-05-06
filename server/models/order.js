@@ -1,27 +1,19 @@
 const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Schema.Types;
 
 const orderItemSchema = new mongoose.Schema({
-  menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem" },
+  menuItem: { type: ObjectId, ref: "MenuItem" },
   price: Number,
   modifications: Object,
 });
 
 const orderSchema = new mongoose.Schema({
-  customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
-  vendor: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
-  orderItems: [{ type: mongoose.Schema.Types.ObjectId, ref: "OrderItem" }],
+  customer: { type: ObjectId, ref: "Customer" },
+  address: { type: ObjectId, ref: "Address" },
+  vendor: { type: ObjectId, ref: "Vendor" },
+  orderItems: [{ type: ObjectId, ref: "OrderItem" }],
   method: { type: String, enums: ["DELIVERY", "PICKUP"], default: "PICKUP" },
-  address: {
-    city: String,
-    state: String,
-    street: String,
-    number: Number,
-    unit: Number,
-    zip: Number,
-    latitude: Number,
-    longitude: Number,
-    note: String,
-  },
+  address: [{ type: ObjectId, ref: "Address" }],
   total: { type: Number, default: 0 },
   tip: { type: Number, min: 0 },
   amountPaid: Number,
@@ -68,7 +60,6 @@ orderSchema.methods.changeDisposition = async function (disposition) {
     return { error, functionName: "changeDisposition" };
   }
 };
-
 
 const OrderItem = mongoose.model("OrderItem", orderItemSchema);
 const Order = mongoose.model("Order", orderSchema);

@@ -50,7 +50,7 @@ router
       });
     } catch (error) {
       await logError(error, req);
-      res.status(500).send({ error });
+      res.status(500).json(error);
     }
   })
   .post("/login", async (req, res) => {
@@ -61,7 +61,7 @@ router
         logError({ message: "User not found" }, req);
         return res
           .status(401)
-          .send({ message: "Incorrect username and/or password." });
+          .json({ message: "Incorrect username and/or password." });
       }
       const passwordIsValid = foundVendor.validatePassword(password);
       if (!passwordIsValid) {
@@ -74,7 +74,7 @@ router
       res.status(200).json({ token, profile: foundVendor, userType: "vendor" });
     } catch (error) {
       await logError(error, req, this.name);
-      res.status(500).send({ error });
+      res.status(500).json(error);
     }
   })
   .post("/addMenuItem", async (req, res) => {
@@ -92,12 +92,14 @@ router
         modifications,
       });
       if (menuItems.error) {
-        logError(menuItems.error, req, menuItems.functionName);
+        const { error, functionName } = menuItems;
+        logError(error, req, functionName);
+        return res.status(500).json(error);
       }
       res.status(200).json({ menuItems });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .post("/removeMenuItem", async (req, res) => {
@@ -109,12 +111,14 @@ router
       }
       const menuItems = await vendor.removeMenuItem(menuItemId);
       if (menuItems.error) {
-        logError(menuItems.error, req, menuItems.functionName);
+        const { error, functionName } = menuItems;
+        logError(error, req, functionName);
+        return res.status(500).json(error);
       }
       res.status(200).json({ menuItems });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .post("/editMenuItem", async (req, res) => {
@@ -126,12 +130,14 @@ router
       }
       const menuItems = await vendor.editMenuItem(menuItemId, changes);
       if (menuItems.error) {
-        logError(menuItems.error, req, menuItems.functionName);
+        const { error, functionName } = menuItems;
+        logError(error, req, functionName);
+        return res.status(500).json(error);
       }
       res.status(200).json({ menuItems });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .post("/addModification", async (req, res) => {
@@ -148,16 +154,14 @@ router
         defaultOptionIndex,
       });
       if (savedModifications.error) {
-        logError(
-          savedModifications.error,
-          req,
-          savedModifications.functionName
-        );
+        const { error, functionName } = savedModifications;
+        logError(error, req, functionName);
+        return res.status(500).json(error);
       }
       res.status(200).json({ savedModifications });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .post("/removeModification", async (req, res) => {
@@ -169,16 +173,14 @@ router
       }
       const savedModifications = await vendor.removeModification(menuItemId);
       if (savedModifications.error) {
-        logError(
-          savedModifications.error,
-          req,
-          savedModifications.functionName
-        );
+        const { error, functionName } = savedModifications;
+        logError(error, req, functionName);
+        return res.status(500).json(error);
       }
       res.status(200).json({ savedModifications });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .post("/editModification", async (req, res) => {
@@ -190,16 +192,14 @@ router
         changes
       );
       if (savedModifications.error) {
-        logError(
-          savedModifications.error,
-          req,
-          savedModifications.functionName
-        );
+        const { error, functionName } = savedModifications;
+        logError(error, req, functionName);
+        return res.status(500).json(error);
       }
       res.status(200).json({ savedModifications });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .get("/confirmEmail", async (req, res) => {
@@ -210,10 +210,10 @@ router
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
-      res.status(200).send(emailConfirmation.confirmed());
+      res.status(200).json(emailConfirmation.confirmed());
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .get("/me", async (req, res) => {
@@ -222,7 +222,7 @@ router
       res.status(200).json({ profile });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .get("/menu", async (req, res) => {
@@ -238,7 +238,7 @@ router
       res.status(200).json({ foundMenu });
     } catch (error) {
       logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .get("/:vendorId", async (req, res) => {
@@ -251,7 +251,7 @@ router
       res.status(200).json({ foundVendor });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .post("/editVendor", async (req, res) => {
@@ -261,7 +261,7 @@ router
       if (!passwordIsValid) {
         const error = { message: "Unauthorized." };
         logError(error, req);
-        return res.status(401).json({ error });
+        return res.status(401).json(error);
       }
       const savedVendor = await vendor.editVendor(req.body);
       if (savedVendor.error) {
@@ -270,7 +270,7 @@ router
       res.status(200).json({ savedVendor });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .get("/", async (req, res) => {
@@ -282,7 +282,7 @@ router
       res.status(200).json({ vendors });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   })
   .post("/sendConfirmationEmail", async (req, res) => {
@@ -302,7 +302,7 @@ router
       res.status(200).json({ success: true });
     } catch (error) {
       await logError(error, req);
-      res.status(500).json({ error });
+      res.status(500).json(error);
     }
   });
 
