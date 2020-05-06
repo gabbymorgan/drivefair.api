@@ -122,8 +122,11 @@ customerSchema.methods.addAddress = async function (address) {
   try {
     const newAddress = await new Address(address).save();
     this.addresses.push(newAddress._id);
-    await this.save();
-    return newAddress;
+    const savedCustomer = await this.save();
+    const { addresses } = await savedCustomer
+      .populate("addresses")
+      .execPopulate();
+    return addresses;
   } catch (error) {
     return { error };
   }
