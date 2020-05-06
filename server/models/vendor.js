@@ -5,6 +5,7 @@ const Customer = require("./customer");
 const Modification = require("./modification");
 const MenuItem = require("./menuItem");
 const Payment = require("../services/payment");
+const { ObjectId } = mongoose.Schema.Types;
 
 const vendorSchema = new mongoose.Schema({
   email: {
@@ -36,16 +37,14 @@ const vendorSchema = new mongoose.Schema({
     },
     message: (props) => `${props.value} is not a valid imgur URI path!`,
   },
-  menu: [{ type: mongoose.Schema.Types.ObjectId, ref: "MenuItem" }],
-  modifications: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "Modification" },
-  ],
+  menu: [{ type: ObjectId, ref: "MenuItem" }],
+  modifications: [{ type: ObjectId, ref: "Modification" }],
   createdOn: { type: Date, default: Date.now },
   visits: [{ type: Date }],
   lastVisited: { type: Date, default: Date.now },
-  activeOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
-  completedOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
-  orderHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
+  activeOrders: [{ type: ObjectId, ref: "Order" }],
+  completedOrders: [{ type: ObjectId, ref: "Order" }],
+  orderHistory: [{ type: ObjectId, ref: "Order" }],
 });
 
 vendorSchema.methods.validatePassword = async function (password) {
@@ -217,7 +216,7 @@ vendorSchema.methods.completeOrder = async function (orderId) {
     await savedVendor
       .populate({
         path: "activeOrders completedOrders",
-        populate: "orderItems",
+        populate: "orderItems address",
       })
       .execPopulate();
     return savedVendor;
@@ -240,7 +239,7 @@ vendorSchema.methods.deliverOrder = async function (orderId) {
     await savedVendor
       .populate({
         path: "completedOrders orderHistory",
-        populate: "orderItems",
+        populate: "orderItems address",
       })
       .execPopulate();
     return savedVendor;

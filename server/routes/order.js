@@ -86,7 +86,7 @@ router
         .populate({
           path: "activeOrders",
           populate: {
-            path: "vendor customer orderItems",
+            path: "vendor customer address orderItems",
             select: "-password",
             populate: "menuItem",
           },
@@ -104,7 +104,7 @@ router
         .populate({
           path: "completedOrders",
           populate: {
-            path: "vendor customer orderItems",
+            path: "vendor customer address orderItems",
             select: "-password",
             populate: "menuItem",
           },
@@ -139,7 +139,9 @@ router
       const { orderId } = req.body;
       const updatedVendor = await req.user.completeOrder(orderId);
       if (updatedVendor.error) {
-        logError(updatedVendor.error, req, updatedVendor.functionName);
+        const { error, functionName } = updatedVendor;
+        logError(error, req, functionName);
+        return res.status(500).json({ error });
       }
       res.status(200).json({
         activeOrders: updatedVendor.activeOrders,
@@ -156,7 +158,9 @@ router
       const { orderId } = req.body;
       const updatedVendor = await req.user.deliverOrder(orderId);
       if (updatedVendor.error) {
-        logError(updatedVendor.error, req, updatedVendor.functionName);
+        const { error, functionName } = updatedVendor;
+        logError(error, req, functionName);
+        return res.status(500).json({ error });
       }
       res.status(200).json({
         orderHistory: updatedVendor.orderHistory,
@@ -172,7 +176,9 @@ router
       const { orderId } = req.body;
       const updatedVendor = await req.user.refundOrder(orderId);
       if (updatedVendor.error) {
-        logError(updatedVendor.error, req, updatedVendor.functionName);
+        const { error, functionName } = updatedVendor;
+        logError(error, req, functionName);
+        return res.status(500).json({ error });
       }
       res.status(200).json({
         activeOrders: updatedVendor.activeOrders,
