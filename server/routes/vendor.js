@@ -210,7 +210,7 @@ router
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
-      res.status(200).json(emailConfirmation.confirmed());
+      res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {
       await logError(error, req);
       res.status(500).json(error);

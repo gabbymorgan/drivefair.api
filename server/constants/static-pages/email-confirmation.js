@@ -12,15 +12,19 @@ const request = (userType, name, token) => `
 `;
 
 const confirmed = () => `
-  <script>setTimeout(() => window.location = "${process.env.FRONTEND_URL}", 3000)</script>
-  <div style="height:100vh;display:flex;justify-content:center;align-items:center;text-align:center">
-    <p style="font-size:2rem">
-      Good jorb! Let's get out of here.
-    </p>
-  </div>
+<html>
+  <body>
+    <script>setTimeout(() => window.location = "${process.env.FRONTEND_URL}", 3000)</script>
+    <div style="height:100vh;display:flex;justify-content:center;align-items:center;text-align:center">
+      <p style="font-size:2rem">
+        Good jorb! Let's get out of here.
+      </p>
+    </div>
+  </body>
+</html>
 `;
 
 module.exports = {
   confirmed,
-  request
-}
+  request,
+};
