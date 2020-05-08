@@ -7,6 +7,7 @@ const { emailTransporter } = require("./server/services/communications");
 const { jwtMiddleware, logActivity } = require("./server/services/middleware");
 
 const orderRouter = require("./server/routes/order");
+const settingsRouter = require("./server/routes/settings");
 const vendorRouter = require("./server/routes/vendor");
 const customerRouter = require("./server/routes/customer");
 
@@ -38,6 +39,7 @@ app.use(logActivity);
 app.use("/customers", customerRouter);
 app.use("/vendors", vendorRouter);
 app.use("/orders", orderRouter);
+app.use("/settings", settingsRouter);
 
 app.get("/", async (req, res) => {
   res.status(200).json("Hello squirrel");
