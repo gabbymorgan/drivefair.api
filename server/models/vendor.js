@@ -4,6 +4,7 @@ const Order = require("./order");
 const Customer = require("./customer");
 const Modification = require("./modification");
 const MenuItem = require("./menuItem");
+const Driver = require("./driver");
 const Payment = require("../services/payment");
 const { ObjectId } = mongoose.Schema.Types;
 
@@ -45,6 +46,7 @@ const vendorSchema = new mongoose.Schema({
   activeOrders: [{ type: ObjectId, ref: "Order" }],
   completedOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
+  drivers: [{ type: ObjectId, ref: "Driver" }],
 });
 
 vendorSchema.methods.validatePassword = async function (password) {
@@ -285,6 +287,32 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     return refundedOrder;
   } catch (error) {
     return { error, functionName: "chargeCartToCard" };
+  }
+};
+
+vendorSchema.methods.addDriver = async function (driverId) {
+  try {
+    const driver = await new Driver.findById(driverId);
+    if (!driver) {
+      return { error: "No driver by that Id;", functionName: "addDriver" };
+    }
+    this.drivers.push(driverId);
+    await this.save();
+    const vendorWithDrivers = await this.populate("drivers").execPopulate();
+    return vendorWithDrivers.modifications;
+  } catch (error) {
+    return { error, functionName: "addModification" };
+  }
+};
+
+vendorSchema.methods.removeDriver = async function (driverId) {
+  try {
+    this.drivers.pull(driverId);
+    await this.save();
+    const vendorWithDrivers = await this.populate("drivers").execPopulate();
+    return vendorWithDrivers.modifications;
+  } catch (error) {
+    return { error, functionName: "addModification" };
   }
 };
 

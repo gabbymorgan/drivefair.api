@@ -13,9 +13,11 @@ const jwtMiddleware = async (req, res, next) => {
       const token = req.query.token || req.body.token;
       if (token) req.user = await validateToken(token);
     }
+    if (req.user.error) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
     next();
   } catch (error) {
-    req.error = error;
     logError(error, req, "jwtMiddleware");
     next();
   }
@@ -26,7 +28,7 @@ const logActivity = async (req, res, next) => {
     let userId;
     const { user, body, hostname, path, method } = req;
     if (user) {
-      user.lastVisited = Date.now();
+      user.lastVisited = new Date();
       await user.save();
       userId = user._id;
     }
