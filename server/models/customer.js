@@ -82,7 +82,7 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
       disposition: "PAID",
       chargeId: charge.id,
       amountPaid: charge.amount,
-      modifiedOn: Date.now(),
+      modifiedOn: new Date(),
     });
     vendor.activeOrders.push(cart._id);
     this.activeOrders.push(cart._id);
@@ -173,7 +173,7 @@ customerSchema.methods.editAddress = async function (addressId, changes) {
         address[property] = changes[property];
       }
     });
-    address.modifiedOn = Date.now();
+    address.modifiedOn = new Date();
     await address.save();
     const { addresses } = await this.populate("addresses").execPopulate();
     return addresses;
