@@ -98,9 +98,9 @@ orderSchema.methods.acceptOrder = async function ({
   }
 };
 
-orderSchema.methods.requestDriver = async function (selectedDriver) {
+orderSchema.methods.requestDriver = async function (driver) {
   try {
-    if (selectedDriver.status !== "ACTIVE") {
+    if (driver.status !== "ACTIVE") {
       return {
         error: "Selected driver is currently inactive.",
       };

@@ -37,11 +37,15 @@ driverSchema.methods.validatePassword = async function (password) {
 
 driverSchema.methods.getRoute = async function () {
   try {
-    const driverWithRoute = await this.populate({
-      path: "route",
-      populate: { path: "customer vendor address", select: "-password" },
-    }).execPopulate();
-    return driverWithRoute.route;
+    const route = await DeliveryRoute.findById(this.route);
+    const populatedRoute = await route
+      .populate({
+        path: "orders",
+        populate: { path: "address" },
+      })
+      .populate("vendor")
+      .execPopulate();
+    return populatedRoute;
   } catch (error) {
     return { error, functionName: "getRoute" };
   }
@@ -50,20 +54,31 @@ driverSchema.methods.getRoute = async function () {
 driverSchema.methods.addOrderToRoute = async function (orderId) {
   try {
     const order = await Order.findById(orderId);
-    if (!this.route) {
-      this.route = new Route({ orders: [orderId], vendor: order.vendor });
-    }
-    order.driver = this._id;
-    this.route.orders.push(orderId);
-    await order.save();
-    await this.save();
     const driverWithRoute = await this.populate({
       path: "route",
-      populate: { path: "customer vendor address", select: "-password" },
+      populate: { path: "customer vendor", select: "-password" },
     }).execPopulate();
-    return driverWithRoute.route;
+    let { route } = driverWithRoute;
+    if (!route) {
+      driverWithRoute.route = new DeliveryRoute({
+        orders: [orderId],
+        vendor: order.vendor,
+      });
+    } else if (route.vendor.toString() !== order.vendor.toString()) {
+      return {
+        error: "Cannot add order from different vendor to route in progress.",
+        functionName: "addOrderToRoute",
+      };
+    } else {
+      route.orders.push(orderId);
+    }
+    order.driver = driverWithRoute._id;
+    await route.save();
+    await order.save();
+    await driverWithRoute.save();
+    return route;
   } catch (error) {
-    return { error, functionName: "addToRoute" };
+    return { error, functionName: "addOrderToRoute" };
   }
 };
 
@@ -81,7 +96,7 @@ driverSchema.methods.pickUpOrder = async function (orderId) {
     }).execPopulate();
     return driverWithRoute.route;
   } catch (error) {
-    return { error, functionName: "addToRoute" };
+    return { error, functionName: "pickUpOrder" };
   }
 };
 
