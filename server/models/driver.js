@@ -41,7 +41,7 @@ driverSchema.methods.getRoute = async function () {
     const populatedRoute = await route
       .populate({
         path: "orders",
-        populate: { path: "address" },
+        populate: { path: "address customer" },
       })
       .populate("vendor")
       .execPopulate();
