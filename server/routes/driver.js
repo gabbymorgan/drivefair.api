@@ -166,6 +166,20 @@ router
       logError(error, req);
       res.status(500).json({ error });
     }
+  })
+  .post("/setLocation", async (req, res) => {
+    try {
+      const { latitude, longitude } = req.body;
+      console.log({latitude})
+      const driver = req.user;
+      driver.latitude = latitude;
+      driver.longitude = longitude;
+      const savedDriver = await driver.save();
+      res.status(200).json({ savedDriver });
+    } catch (error) {
+      logError(error, req);
+      res.status(500).json({ error });
+    }
   });
 
 module.exports = router;

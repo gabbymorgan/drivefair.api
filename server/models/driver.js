@@ -64,7 +64,7 @@ driverSchema.methods.addOrderToRoute = async function (orderId) {
         orders: [orderId],
         vendor: order.vendor,
       });
-    } else if (route.vendor.toString() !== order.vendor.toString()) {
+    } else if (route.vendor._id.toString() !== order.vendor.toString()) {
       return {
         error: "Cannot add order from different vendor to route in progress.",
         functionName: "addOrderToRoute",
