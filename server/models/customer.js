@@ -26,7 +26,7 @@ const customerSchema = new mongoose.Schema({
   lastVisited: { type: Date, default: Date.now },
   cart: { type: ObjectId, ref: "Order" },
   activeOrders: [{ type: ObjectId, ref: "Order" }],
-  completedOrders: [{ type: ObjectId, ref: "Order" }],
+  readyOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
 });
 
@@ -145,11 +145,11 @@ customerSchema.methods.deleteAddress = async function (addressId) {
 
 customerSchema.methods.editAddress = async function (addressId, changes) {
   try {
-    const { activeOrders, completedOrders } = await this.populate(
-      "activeOrders, completedOrders"
+    const { activeOrders, readyOrders } = await this.populate(
+      "activeOrders, readyOrders"
     ).execPopulate();
     if (
-      [...activeOrders, ...completedOrders].find(
+      [...activeOrders, ...readyOrders].find(
         (order) => order.address.toString() === addressId.toString()
       )
     ) {

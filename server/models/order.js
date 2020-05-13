@@ -11,16 +11,30 @@ const orderSchema = new mongoose.Schema({
   customer: { type: ObjectId, ref: "Customer" },
   address: { type: ObjectId, ref: "Address" },
   vendor: { type: ObjectId, ref: "Vendor" },
+  driver: { type: ObjectId, ref: "Driver" },
   orderItems: [{ type: ObjectId, ref: "OrderItem" }],
   method: { type: String, enums: ["DELIVERY", "PICKUP"], default: "PICKUP" },
   address: [{ type: ObjectId, ref: "Address" }],
   total: { type: Number, default: 0 },
   tip: { type: Number, min: 0 },
+  estimatedReadyTime: { type: Date },
+  actualReadyTime: { type: Date },
+  estimatedDeliveryTime: { type: Date },
+  actualDeliveryTime: { type: Date },
   amountPaid: Number,
   createdOn: { type: Date, default: Date.now },
   disposition: {
     type: String,
-    enums: ["NEW", "PAID", "COMPLETE", "CANCELED", "DELIVERED"],
+    enums: [
+      "NEW",
+      "PAID",
+      "ACCEPTED",
+      "READY",
+      "ASSIGNED",
+      "EN_ROUTE",
+      "DELIVERED",
+      "CANCELED",
+    ],
     default: "NEW",
   },
   chargeId: String,
@@ -58,6 +72,42 @@ orderSchema.methods.changeDisposition = async function (disposition) {
     return await this.save();
   } catch (error) {
     return { error, functionName: "changeDisposition" };
+  }
+};
+
+orderSchema.methods.acceptOrder = async function ({
+  vendor,
+  selectedDriver,
+  timeToReady,
+}) {
+  try {
+    if (this.vendor.toString() !== vendor._id.toString()) {
+      return { error: "Unauthorized", functionName: "acceptOrder" };
+    }
+    if (this.method === "DELIVERY") {
+      const driverRequest = await this.requestDriver(selectedDriver);
+      if (driverRequest.error) {
+        return { error: driverRequest.error, functionName: "requestDriver" };
+      }
+    }
+    this.estimatedReadyTime = new Date(Date.now() + timeToReady * 60 * 1000);
+    this.disposition = "ACCEPTED";
+    return await this.save();
+  } catch (error) {
+    return { error, functionName: "acceptOrder" };
+  }
+};
+
+orderSchema.methods.requestDriver = async function (selectedDriver) {
+  try {
+    if (selectedDriver.status !== "ACTIVE") {
+      return {
+        error: "Selected driver is currently inactive.",
+      };
+    }
+    return await driver.addOrderToRoute(this._id);
+  } catch (error) {
+    return { error };
   }
 };
 

@@ -44,7 +44,7 @@ const vendorSchema = new mongoose.Schema({
   visits: [{ type: Date }],
   lastVisited: { type: Date, default: Date.now },
   activeOrders: [{ type: ObjectId, ref: "Order" }],
-  completedOrders: [{ type: ObjectId, ref: "Order" }],
+  readyOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
   drivers: [{ type: ObjectId, ref: "Driver" }],
 });
@@ -204,26 +204,26 @@ vendorSchema.methods.editModification = async function (
   }
 };
 
-vendorSchema.methods.completeOrder = async function (orderId) {
+vendorSchema.methods.readyOrder = async function (orderId) {
   try {
     const foundOrder = await Order.findById(orderId).populate("customer");
     const { customer } = foundOrder;
     customer.activeOrders.pull(orderId);
-    customer.completedOrders.push(orderId);
+    customer.readyOrders.push(orderId);
     this.activeOrders.pull(orderId);
-    this.completedOrders.push(orderId);
-    await foundOrder.changeDisposition("COMPLETE");
+    this.readyOrders.push(orderId);
+    await foundOrder.changeDisposition("READY");
     await customer.save();
     const savedVendor = await this.save();
     await savedVendor
       .populate({
-        path: "activeOrders completedOrders",
+        path: "activeOrders readyOrders",
         populate: "orderItems address",
       })
       .execPopulate();
     return savedVendor;
   } catch (error) {
-    return { error, functionName: "completeOrder" };
+    return { error, functionName: "readyOrder" };
   }
 };
 
@@ -231,16 +231,16 @@ vendorSchema.methods.deliverOrder = async function (orderId) {
   try {
     const foundOrder = await Order.findById(orderId).populate("customer");
     const { customer } = foundOrder;
-    customer.completedOrders.pull(orderId);
+    customer.readyOrders.pull(orderId);
     customer.orderHistory.push(orderId);
-    this.completedOrders.pull(orderId);
+    this.readyOrders.pull(orderId);
     this.orderHistory.push(orderId);
     await foundOrder.changeDisposition("DELIVERED");
     await customer.save();
     const savedVendor = await this.save();
     await savedVendor
       .populate({
-        path: "completedOrders orderHistory",
+        path: "readyOrders orderHistory",
         populate: "orderItems address",
       })
       .execPopulate();
@@ -261,17 +261,16 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     if (charge.error) {
       return { error: charge.error, functionName: "chargeToCard" };
     }
-    const refundedOrder = await order.update({
-      disposition: "CANCELED",
-    });
-    customer.activeOrders.pull(order._id);
-    customer.completedOrders.pull(order._id);
-    customer.orderHisory.push(order._id);
-    this.activeOrders.pull(order._id);
-    this.completedOrders.pull(order._id);
-    this.orderHisory.push(order._id);
+    order.disposition = "CANCELED";
+    customer.activeOrders.pull(orderId);
+    customer.readyOrders.pull(orderId);
+    customer.orderHisory.push(orderId);
+    this.activeOrders.pull(orderId);
+    this.readyOrders.pull(orderId);
+    this.orderHisory.push(orderId);
     await customer.save();
     await this.save();
+    const refundedOrder = await order.save();
     await emailTransporter.sendMail({
       to: this.email,
       from: '"Denton Delivers", gabby@gabriellapelton.com',
