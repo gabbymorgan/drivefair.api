@@ -11,6 +11,7 @@ const settingsRouter = require("./server/routes/settings");
 const vendorRouter = require("./server/routes/vendor");
 const customerRouter = require("./server/routes/customer");
 const driverRouter = require("./server/routes/driver");
+const routeRouter = require("./server/routes/deliveryRoute");
 
 mongoose
   .connect(
@@ -42,6 +43,7 @@ app.use("/vendors", vendorRouter);
 app.use("/orders", orderRouter);
 app.use("/settings", settingsRouter);
 app.use("/drivers", driverRouter);
+app.use("/route", routeRouter);
 
 app.get("/", async (req, res) => {
   res.status(200).json("Hello squirrel");

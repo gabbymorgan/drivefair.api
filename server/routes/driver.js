@@ -131,9 +131,54 @@ router
       res.status(500).json({ error });
     }
   })
-  .get("/", async (req, res) => {
+  .get("/rostered", async (req, res) => {
     try {
-      res.status(200).json();
+      const drivers = await req.user.populate("drivers").execPopulate();
+      res.status(200).json({ drivers });
+    } catch (error) {
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .get("/active", async (req, res) => {
+    try {
+      const drivers = await Driver.find({ status: "ACTIVE" });
+      res.status(200).json({ drivers });
+    } catch (error) {
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .get("/all", async (req, res) => {
+    try {
+      const drivers = await Driver.find();
+      res.status(200).json({ drivers });
+    } catch (error) {
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/toggleStatus", async (req, res) => {
+    try {
+      const status = await req.user.toggleStatus(req.body.status);
+      if (status.error) {
+        logError(status.error, req, status.functionName);
+        res.status(500).json({ error: status.error });
+      }
+      res.status(200).json({ status });
+    } catch (error) {
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/setLocation", async (req, res) => {
+    try {
+      const { latitude, longitude } = req.body;
+      const driver = req.user;
+      driver.latitude = latitude;
+      driver.longitude = longitude;
+      const savedDriver = await driver.save();
+      res.status(200).json({ savedDriver });
     } catch (error) {
       logError(error, req);
       res.status(500).json({ error });

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const Order = require("./order");
-const Address = require("./address");
+const DeliveryRoute = require("./deliveryRoute");
 const { emailTransporter } = require("../services/communications");
 const OrderStatus = require("../constants/static-pages/order-status");
 const { createCharge } = require("../services/payment");
@@ -23,11 +23,12 @@ const driverSchema = new mongoose.Schema({
   createdOn: { type: Date, default: Date.now },
   visits: [{ type: Date }],
   lastVisited: { type: Date, default: Date.now },
-  route: [{ type: ObjectId, ref: "Order" }],
+  route: { type: ObjectId, ref: "DeliveryRoute" },
   orderHistory: [{ type: ObjectId, ref: "Order" }],
   online: Boolean,
   latitude: Number,
   longitude: Number,
+  status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "INACTIVE" },
 });
 
 driverSchema.methods.validatePassword = async function (password) {
@@ -36,17 +37,86 @@ driverSchema.methods.validatePassword = async function (password) {
 
 driverSchema.methods.getRoute = async function () {
   try {
+    const route = await DeliveryRoute.findById(this.route);
+    const populatedRoute = await route
+      .populate({
+        path: "orders",
+        populate: {
+          path: "address customer orderItems",
+          populate: { path: "menuItem", populate: "modifications" },
+        },
+      })
+      .populate("vendor")
+      .execPopulate();
+    return populatedRoute;
+  } catch (error) {
+    return { error, functionName: "getRoute" };
+  }
+};
+
+driverSchema.methods.addOrderToRoute = async function (orderId) {
+  try {
+    const order = await Order.findById(orderId);
     const driverWithRoute = await this.populate({
       path: "route",
-      populate: {
-        path: "orders",
-        populate: { path: "customer vendor address", select: "-password" },
-      },
+      populate: { path: "customer vendor", select: "-password" },
+    }).execPopulate();
+    let { route } = driverWithRoute;
+    if (!route) {
+      route = new DeliveryRoute({
+        orders: [orderId],
+        vendor: order.vendor,
+        driver: this._id,
+      });
+      this.route = route._id;
+    } else if (route.vendor._id.toString() !== order.vendor.toString()) {
+      return {
+        error: "Cannot add order from different vendor to route in progress.",
+        functionName: "addOrderToRoute",
+      };
+    } else {
+      route.orders.push(orderId);
+    }
+    order.driver = driverWithRoute._id;
+    await route.save();
+    await order.save();
+    await this.save();
+    return route;
+  } catch (error) {
+    return { error, functionName: "addOrderToRoute" };
+  }
+};
+
+driverSchema.methods.pickUpOrder = async function (orderId) {
+  try {
+    const order = await Order.findById(orderId);
+    order.disposition = "";
+    order.driver = this._id;
+    this.route.push(orderId);
+    await order.save();
+    await this.save();
+    const driverWithRoute = await this.populate({
+      path: "route",
+      populate: { path: "customer vendor address", select: "-password" },
     }).execPopulate();
     return driverWithRoute.route;
   } catch (error) {
-    return { error, functionName: "getCart" };
+    return { error, functionName: "pickUpOrder" };
   }
+};
+
+driverSchema.methods.toggleStatus = async function (status) {
+  console.log(status);
+  const route = await this.getRoute();
+  if (route.orders.length && status === "INACTIVE") {
+    return {
+      error: "There are still active orders on your route!",
+      functionName: "toggleStatus",
+    };
+  }
+  this.status = status;
+  const savedDriver = await this.save();
+  return savedDriver.status;
 };
 
 module.exports = mongoose.model("Driver", driverSchema);

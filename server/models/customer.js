@@ -26,7 +26,7 @@ const customerSchema = new mongoose.Schema({
   lastVisited: { type: Date, default: Date.now },
   cart: { type: ObjectId, ref: "Order" },
   activeOrders: [{ type: ObjectId, ref: "Order" }],
-  completedOrders: [{ type: ObjectId, ref: "Order" }],
+  readyOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
 });
 
@@ -67,6 +67,12 @@ customerSchema.methods.getCart = async function () {
 customerSchema.methods.chargeCartToCard = async function (paymentToken) {
   try {
     const cart = await Order.findById(this.cart);
+    if (cart.method === "DELIVERY" && !cart.address) {
+      return {
+        error: "Cannot complete order without address.",
+        functionName: "chargeCartToCard",
+      };
+    }
     const cartWithVendor = await cart.populate("vendor").execPopulate();
     const { vendor } = cartWithVendor;
     const charge = await createCharge(
@@ -145,11 +151,11 @@ customerSchema.methods.deleteAddress = async function (addressId) {
 
 customerSchema.methods.editAddress = async function (addressId, changes) {
   try {
-    const { activeOrders, completedOrders } = await this.populate(
-      "activeOrders, completedOrders"
+    const { activeOrders, readyOrders } = await this.populate(
+      "activeOrders, readyOrders"
     ).execPopulate();
     if (
-      [...activeOrders, ...completedOrders].find(
+      [...activeOrders, ...readyOrders].find(
         (order) => order.address.toString() === addressId.toString()
       )
     ) {
