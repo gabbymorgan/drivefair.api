@@ -36,13 +36,19 @@ deliveryRouteSchema.methods.pickUpOrder = async function (orderId) {
       return { error: "Order does not belong to this driver." };
     }
     const foundOrder = await Order.findById(orderId);
+    if (foundOrder.disposition !== "READY") {
+      return {
+        error: "Order is not ready to pick up.",
+        functionName: "pickUpOrder",
+      };
+    }
     foundOrder.disposition = "EN_ROUTE";
     await foundOrder.save();
-    const route = await this.populate({
-      path: "customer vendor address",
-      select: "-password",
-    }).execPopulate();
-    return route;
+    const savedRoute = await this.save();
+    await savedRoute
+      .populate({ path: "customer vendor address", select: "-password" })
+      .execPopulate();
+    return savedRoute;
   } catch (error) {
     return { error, functionName: "pickUpOrder" };
   }
