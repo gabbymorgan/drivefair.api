@@ -163,7 +163,7 @@ router
       const status = await req.user.toggleStatus(req.body.status);
       if (status.error) {
         logError(status.error, req, status.functionName);
-        res.status(500).json({ error: status.error });
+        return res.status(500).json({ error: status.error });
       }
       res.status(200).json({ status });
     } catch (error) {

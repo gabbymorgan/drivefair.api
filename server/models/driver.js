@@ -107,7 +107,7 @@ driverSchema.methods.pickUpOrder = async function (orderId) {
 
 driverSchema.methods.toggleStatus = async function (status) {
   const route = await this.getRoute();
-  if (route.orders && !route.orders.length && status === "INACTIVE") {
+  if (route && route.orders.length && status === "INACTIVE") {
     return {
       error: "There are still active orders on your route!",
       functionName: "toggleStatus",
