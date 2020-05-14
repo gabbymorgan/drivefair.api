@@ -1,5 +1,7 @@
 const express = require("express");
 const logError = require("../services/errorLog");
+const Order = require("../models/order");
+const Driver = require("../models/driver");
 
 const router = express.Router();
 
@@ -79,15 +81,14 @@ router
       res.status(500).json({ error });
     }
   })
-
-  .get("/activeOrders", async (req, res) => {
+  .get("/active", async (req, res) => {
     try {
       const userWithOrders = await req.user
         .populate({
           path: "activeOrders",
           populate: {
             path: "vendor customer address orderItems",
-            select: "-password",
+            select: "-password -email",
             populate: "menuItem",
           },
         })
@@ -98,32 +99,32 @@ router
       res.status(500).json({ error });
     }
   })
-  .get("/completedOrders", async (req, res) => {
+  .get("/ready", async (req, res) => {
     try {
       const userWithOrders = await req.user
         .populate({
-          path: "completedOrders",
+          path: "readyOrders",
           populate: {
             path: "vendor customer address orderItems",
-            select: "-password",
+            select: "-password -email",
             populate: "menuItem",
           },
         })
         .execPopulate();
-      res.status(200).json({ completedOrders: userWithOrders.completedOrders });
+      res.status(200).json({ readyOrders: userWithOrders.readyOrders });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
     }
   })
-  .get("/orderHistory", async (req, res) => {
+  .get("/history", async (req, res) => {
     try {
       const userWithOrders = await req.user
         .populate({
           path: "orderHistory",
           populate: {
             path: "vendor customer orderItems",
-            select: "-password",
+            select: "-password -email",
             populate: "menuItem",
           },
         })
@@ -134,10 +135,47 @@ router
       res.status(500).json({ error });
     }
   })
-  .post("/completeOrder", async (req, res) => {
+  .post("/acceptOrder", async (req, res) => {
+    try {
+      const { orderId, selectedDriverId, timeToReady } = req.body;
+      const vendor = req.user;
+      if (!vendor.activeOrders.includes(orderId)) {
+        return res.status(401).json({ error: { message: "Unauthorized" } });
+      }
+      const order = await Order.findById(orderId);
+      const selectedDriver = await Driver.findById(selectedDriverId);
+      const updatedOrder = await order.acceptOrder({
+        vendor,
+        selectedDriver,
+        timeToReady,
+      });
+      if (updatedOrder.error) {
+        const { error, functionName } = updatedOrder;
+        logError(error, req, functionName);
+        return res.status(500).json({ error });
+      }
+      const vendorWithOrders = await vendor
+        .populate({
+          path: "activeOrders",
+          populate: {
+            path: "vendor customer address orderItems",
+            select: "-password -email",
+            populate: "menuItem",
+          },
+        })
+        .execPopulate();
+      res.status(200).json({
+        activeOrders: vendorWithOrders.activeOrders,
+      });
+    } catch (error) {
+      await logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/readyOrder", async (req, res) => {
     try {
       const { orderId } = req.body;
-      const updatedVendor = await req.user.completeOrder(orderId);
+      const updatedVendor = await req.user.readyOrder(orderId);
       if (updatedVendor.error) {
         const { error, functionName } = updatedVendor;
         logError(error, req, functionName);
@@ -145,14 +183,13 @@ router
       }
       res.status(200).json({
         activeOrders: updatedVendor.activeOrders,
-        completedOrders: updatedVendor.completedOrders,
+        readyOrders: updatedVendor.readyOrders,
       });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
     }
   })
-
   .post("/deliverOrder", async (req, res) => {
     try {
       const { orderId } = req.body;
@@ -164,7 +201,7 @@ router
       }
       res.status(200).json({
         orderHistory: updatedVendor.orderHistory,
-        completedOrders: updatedVendor.completedOrders,
+        readyOrders: updatedVendor.readyOrders,
       });
     } catch (error) {
       await logError(error, req);
@@ -173,8 +210,13 @@ router
   })
   .post("/refundOrder", async (req, res) => {
     try {
-      const { orderId } = req.body;
-      const updatedVendor = await req.user.refundOrder(orderId);
+      const { orderId, password } = req.body;
+      const vendor = req.user;
+      const passwordIsValid = await vendor.validatePassword(password);
+      if (!passwordIsValid) {
+        return res.status(401).json({ error: { message: "Unauthorized" } });
+      }
+      const updatedVendor = await vendor.refundOrder(orderId);
       if (updatedVendor.error) {
         const { error, functionName } = updatedVendor;
         logError(error, req, functionName);
@@ -182,7 +224,7 @@ router
       }
       res.status(200).json({
         activeOrders: updatedVendor.activeOrders,
-        completedOrders: updatedVendor.completedOrders,
+        readyOrders: updatedVendor.readyOrders,
         orderHistory: updatedVendor.orderHistory,
       });
     } catch (error) {

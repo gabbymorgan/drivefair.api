@@ -2,10 +2,12 @@ const jwt = require("jsonwebtoken");
 const { logError } = require("./errorLog");
 const Vendor = require("../models/vendor");
 const Customer = require("../models/customer");
+const Driver = require("../models/driver");
 
 const models = {
   Vendor,
   Customer,
+  Driver
 };
 
 const { JWT_EXPIRY_INTERVAL, JWT_SECRET_KEY } = process.env;
