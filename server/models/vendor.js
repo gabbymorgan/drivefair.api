@@ -212,7 +212,8 @@ vendorSchema.methods.readyOrder = async function (orderId) {
     customer.readyOrders.push(orderId);
     this.activeOrders.pull(orderId);
     this.readyOrders.push(orderId);
-    await foundOrder.changeDisposition("READY");
+    foundOrder.disposition = "READY";
+    await foundOrder.save();
     await customer.save();
     const savedVendor = await this.save();
     await savedVendor
@@ -235,7 +236,8 @@ vendorSchema.methods.deliverOrder = async function (orderId) {
     customer.orderHistory.push(orderId);
     this.readyOrders.pull(orderId);
     this.orderHistory.push(orderId);
-    await foundOrder.changeDisposition("DELIVERED");
+    foundOrder.disposition = "DELIVERED";
+    await foundOrder.save();
     await customer.save();
     const savedVendor = await this.save();
     await savedVendor

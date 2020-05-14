@@ -8,13 +8,13 @@ const orderItemSchema = new mongoose.Schema({
 });
 
 const orderSchema = new mongoose.Schema({
+  address: { type: ObjectId, ref: "Address" },
   customer: { type: ObjectId, ref: "Customer" },
   address: { type: ObjectId, ref: "Address" },
   vendor: { type: ObjectId, ref: "Vendor" },
   driver: { type: ObjectId, ref: "Driver" },
   orderItems: [{ type: ObjectId, ref: "OrderItem" }],
   method: { type: String, enums: ["DELIVERY", "PICKUP"], default: "PICKUP" },
-  address: [{ type: ObjectId, ref: "Address" }],
   total: { type: Number, default: 0 },
   tip: { type: Number, min: 0 },
   estimatedReadyTime: { type: Date },
@@ -64,15 +64,6 @@ orderSchema.methods.removeOrderItem = async function (itemId) {
   this.total -= orderItem.price;
   await orderItem.remove();
   return await this.save();
-};
-
-orderSchema.methods.changeDisposition = async function (disposition) {
-  try {
-    this.disposition = disposition;
-    return await this.save();
-  } catch (error) {
-    return { error, functionName: "changeDisposition" };
-  }
 };
 
 orderSchema.methods.acceptOrder = async function ({

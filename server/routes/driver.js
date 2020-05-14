@@ -161,6 +161,10 @@ router
   .post("/toggleStatus", async (req, res) => {
     try {
       const status = await req.user.toggleStatus(req.body.status);
+      if (status.error) {
+        logError(status.error, req, status.functionName);
+        res.status(500).json({ error: status.error });
+      }
       res.status(200).json({ status });
     } catch (error) {
       logError(error, req);
@@ -170,7 +174,6 @@ router
   .post("/setLocation", async (req, res) => {
     try {
       const { latitude, longitude } = req.body;
-      console.log({latitude})
       const driver = req.user;
       driver.latitude = latitude;
       driver.longitude = longitude;

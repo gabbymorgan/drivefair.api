@@ -67,6 +67,12 @@ customerSchema.methods.getCart = async function () {
 customerSchema.methods.chargeCartToCard = async function (paymentToken) {
   try {
     const cart = await Order.findById(this.cart);
+    if (cart.method === "DELIVERY" && !cart.address) {
+      return {
+        error: "Cannot complete order without address.",
+        functionName: "chargeCartToCard",
+      };
+    }
     const cartWithVendor = await cart.populate("vendor").execPopulate();
     const { vendor } = cartWithVendor;
     const charge = await createCharge(

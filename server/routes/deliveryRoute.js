@@ -28,15 +28,66 @@ router
       const route = await req.user.getRoute();
       res.status(200).json({ route });
     } catch (error) {
-      await logError(error, req); 
+      await logError(error, req);
       res.status(500).json({ error });
     }
   })
   .post("/acceptOrder", async (req, res) => {
     try {
       const { orderId } = req.body;
-      const route = await req.user.acceptOrder(orderId);
-      res.status(200).json({ route });
+      console.log({ orderId });
+      const route = await req.user.getRoute();
+      const updatedRoute = await route.acceptOrder(orderId);
+      if (updatedRoute.error) {
+        logError(updatedRoute.error, req, updatedRoute.functionName);
+        return res.status(500).json({ error });
+      }
+      res.status(200).json({ route: updatedRoute });
+    } catch (error) {
+      await logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/pickUpOrder", async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      const route = await req.user.getRoute();
+      const updatedRoute = await route.pickUpOrder(orderId);
+      if (updatedRoute.error) {
+        logError(updatedRoute.error, req, updatedRoute.functionName);
+        return res.status(500).json({ error: updatedRoute.error });
+      }
+      res.status(200).json({ route: updatedRoute });
+    } catch (error) {
+      await logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/deliverOrder", async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      const route = await req.user.getRoute();
+      const updatedRoute = await route.deliverOrder(orderId);
+      if (updatedRoute.error) {
+        logError(updatedRoute.error, req, updatedRoute.functionName);
+        return res.status(500).json({ error });
+      }
+      res.status(200).json({ route: updatedRoute });
+    } catch (error) {
+      await logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/rejectOrder", async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      const route = await req.user.getRoute();
+      const updatedRoute = await route.rejectOrder(orderId);
+      if (updatedRoute.error) {
+        logError(updatedRoute.error, req, updatedRoute.functionName);
+        return res.status(500).json({ error: updatedRoute.error });
+      }
+      res.status(200).json({ route: updatedRoute });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });

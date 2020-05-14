@@ -41,7 +41,10 @@ driverSchema.methods.getRoute = async function () {
     const populatedRoute = await route
       .populate({
         path: "orders",
-        populate: { path: "address customer" },
+        populate: {
+          path: "address customer orderItems",
+          populate: { path: "menuItem", populate: "modifications" },
+        },
       })
       .populate("vendor")
       .execPopulate();
@@ -60,10 +63,12 @@ driverSchema.methods.addOrderToRoute = async function (orderId) {
     }).execPopulate();
     let { route } = driverWithRoute;
     if (!route) {
-      driverWithRoute.route = new DeliveryRoute({
+      route = new DeliveryRoute({
         orders: [orderId],
         vendor: order.vendor,
+        driver: this._id,
       });
+      this.route = route._id;
     } else if (route.vendor._id.toString() !== order.vendor.toString()) {
       return {
         error: "Cannot add order from different vendor to route in progress.",
@@ -75,7 +80,7 @@ driverSchema.methods.addOrderToRoute = async function (orderId) {
     order.driver = driverWithRoute._id;
     await route.save();
     await order.save();
-    await driverWithRoute.save();
+    await this.save();
     return route;
   } catch (error) {
     return { error, functionName: "addOrderToRoute" };
@@ -100,36 +105,15 @@ driverSchema.methods.pickUpOrder = async function (orderId) {
   }
 };
 
-driverSchema.methods.deliverOrder = async function (orderId) {
-  try {
-    const foundOrder = await Order.findById(orderId).populate(
-      "customer vendor"
-    );
-    const { customer, vendor } = foundOrder;
-    customer.readyOrders.pull(orderId);
-    customer.orderHistory.push(orderId);
-    vendor.readyOrders.pull(orderId);
-    vendor.orderHistory.push(orderId);
-    this.route.orders.pull(orderId);
-    this.orderHistory.push(orderId);
-    await this.route.save();
-    await foundOrder.changeDisposition("DELIVERED");
-    await customer.save();
-    await vendor.save();
-    const savedDriver = await this.save();
-    await savedDriver
-      .populate({
-        path: "route",
-        populate: { path: "customer vendor address", select: "-password" },
-      })
-      .execPopulate();
-    return savedDriver.route;
-  } catch (error) {
-    return { error, functionName: "deliverOrder" };
-  }
-};
-
 driverSchema.methods.toggleStatus = async function (status) {
+  console.log(status);
+  const route = await this.getRoute();
+  if (route.orders.length && status === "INACTIVE") {
+    return {
+      error: "There are still active orders on your route!",
+      functionName: "toggleStatus",
+    };
+  }
   this.status = status;
   const savedDriver = await this.save();
   return savedDriver.status;
