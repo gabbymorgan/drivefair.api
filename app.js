@@ -26,6 +26,9 @@ mongoose
   )
   .then(() => {
     console.log("~~~ connected to db ~~~");
+    app.listen(process.env.PORT, () => {
+      console.log(`LISTENING ON PORT ${process.env.PORT}`);
+    });
   })
   .catch((error) => {
     console.log(error);
@@ -55,6 +58,4 @@ app.get("/", async (req, res) => {
   });
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`LISTENING ON PORT ${process.env.PORT}`);
-});
+module.exports = app;

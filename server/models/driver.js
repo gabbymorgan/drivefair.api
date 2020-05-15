@@ -4,7 +4,6 @@ const Order = require("./order");
 const DeliveryRoute = require("./deliveryRoute");
 const { emailTransporter } = require("../services/communications");
 const OrderStatus = require("../constants/static-pages/order-status");
-const { createCharge } = require("../services/payment");
 const { ObjectId } = mongoose.Schema.Types;
 
 const driverSchema = new mongoose.Schema({
