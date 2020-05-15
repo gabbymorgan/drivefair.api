@@ -133,7 +133,7 @@ vendorSchema.methods.editMenuItem = async function (menuItemId, changes) {
         menuItem[property] = changes[property];
       }
     });
-    menuItem.modifiedOn = Date.now();
+    menuItem.modifiedOn = new Date();
     await menuItem.save();
     const savedVendor = await this.save();
     await savedVendor
@@ -206,14 +206,15 @@ vendorSchema.methods.editModification = async function (
 
 vendorSchema.methods.readyOrder = async function (orderId) {
   try {
-    const foundOrder = await Order.findById(orderId).populate("customer");
-    const { customer } = foundOrder;
+    const order = await Order.findById(orderId).populate("customer");
+    const { customer } = order;
     customer.activeOrders.pull(orderId);
     customer.readyOrders.push(orderId);
     this.activeOrders.pull(orderId);
     this.readyOrders.push(orderId);
-    foundOrder.disposition = "READY";
-    await foundOrder.save();
+    order.disposition = "READY";
+    order.actualReadyTime = new Date();
+    await order.save();
     await customer.save();
     const savedVendor = await this.save();
     await savedVendor
@@ -228,16 +229,16 @@ vendorSchema.methods.readyOrder = async function (orderId) {
   }
 };
 
-vendorSchema.methods.deliverOrder = async function (orderId) {
+vendorSchema.methods.customerPickUpOrder = async function (orderId) {
   try {
-    const foundOrder = await Order.findById(orderId).populate("customer");
-    const { customer } = foundOrder;
+    const order = await Order.findById(orderId).populate("customer");
+    const { customer } = order;
     customer.readyOrders.pull(orderId);
     customer.orderHistory.push(orderId);
     this.readyOrders.pull(orderId);
     this.orderHistory.push(orderId);
-    foundOrder.disposition = "DELIVERED";
-    await foundOrder.save();
+    order.disposition = "DELIVERED";
+    await order.save();
     await customer.save();
     const savedVendor = await this.save();
     await savedVendor

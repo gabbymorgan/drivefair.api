@@ -73,28 +73,23 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
         functionName: "chargeCartToCard",
       };
     }
-    const cartWithVendor = await cart.populate("vendor").execPopulate();
-    const { vendor } = cartWithVendor;
-    const charge = await createCharge(
-      this,
-      cartWithVendor,
-      vendor,
-      paymentToken
-    );
+    await cart.populate("vendor").execPopulate();
+    cart.total = cart.subtotal + cart.tip;
+    const { vendor } = cart;
+    const charge = await createCharge(this, cart, vendor, paymentToken);
     if (charge.error) {
       return { error: charge.error, functionName: "chargeToCard" };
     }
-    const chargedCart = await cart.update({
-      disposition: "PAID",
-      chargeId: charge.id,
-      amountPaid: charge.amount,
-      modifiedOn: new Date(),
-    });
+    cart.disposition = "PAID";
+    cart.chargeId = charge.id;
+    cart.amountPaid = charge.amount;
+    cart.modifiedOn = new Date();
     vendor.activeOrders.push(cart._id);
     this.activeOrders.push(cart._id);
     this.cart = null;
     await vendor.save();
     await this.save();
+    const savedCart = await cart.save();
     emailTransporter.sendMail({
       to: this.email,
       from: '"Denton Delivers", gabby@gabriellapelton.com',
@@ -107,7 +102,7 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
       subject: `You have a new order for ${cart.method}!`,
       html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
     });
-    return chargedCart;
+    return savedCart;
   } catch (error) {
     return { error, functionName: "chargeCartToCard" };
   }
