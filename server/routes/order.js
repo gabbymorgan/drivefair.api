@@ -240,6 +240,24 @@ router
       res.status(500).json({ error });
     }
   })
+  .post("/customerPickUpOrder", async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      const updatedCustomer = await req.user.customerPickUpOrder(orderId);
+      if (updatedCustomer.error) {
+        const { error, functionName } = updatedCustomer;
+        logError(error, req, functionName);
+        return res.status(500).json({ error });
+      }
+      res.status(200).json({
+        orderHistory: updatedCustomer.orderHistory,
+        readyOrders: updatedCustomer.readyOrders,
+      });
+    } catch (error) {
+      await logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
   .post("/refundOrder", async (req, res) => {
     try {
       const { orderId, password } = req.body;

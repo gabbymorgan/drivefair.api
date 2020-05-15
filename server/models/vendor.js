@@ -229,7 +229,7 @@ vendorSchema.methods.readyOrder = async function (orderId) {
   }
 };
 
-vendorSchema.methods.deliverOrder = async function (orderId) {
+vendorSchema.methods.customerPickUpOrder = async function (orderId) {
   try {
     const order = await Order.findById(orderId).populate("customer");
     const { customer } = order;
