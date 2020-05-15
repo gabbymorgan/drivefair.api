@@ -15,8 +15,9 @@ const orderSchema = new mongoose.Schema({
   driver: { type: ObjectId, ref: "Driver" },
   orderItems: [{ type: ObjectId, ref: "OrderItem" }],
   method: { type: String, enums: ["DELIVERY", "PICKUP"], default: "PICKUP" },
-  total: { type: Number, default: 0 },
+  subtotal: { type: Number, default: 0 },
   tip: { type: Number, min: 0 },
+  total: { type: Number, default: 0 },
   estimatedReadyTime: { type: Date },
   actualReadyTime: { type: Date },
   estimatedDeliveryTime: { type: Date },
@@ -28,7 +29,8 @@ const orderSchema = new mongoose.Schema({
     enums: [
       "NEW",
       "PAID",
-      "ACCEPTED",
+      "ACCEPTED_BY_VENDOR",
+      "ACCEPTED_BY_DRIVER",
       "READY",
       "ASSIGNED",
       "EN_ROUTE",
@@ -54,42 +56,43 @@ orderSchema.methods.addOrderItem = async function (item) {
   });
   const newOrderItem = await new OrderItem({ ...item }).save();
   this.orderItems.push(newOrderItem);
-  this.total += item.price;
+  this.subtotal += item.price;
   return await this.save();
 };
 
 orderSchema.methods.removeOrderItem = async function (itemId) {
   const orderItem = await OrderItem.findById(itemId);
   await this.orderItems.pull(itemId);
-  this.total -= orderItem.price;
+  this.subtotal -= orderItem.price;
   await orderItem.remove();
   return await this.save();
 };
 
-orderSchema.methods.acceptOrder = async function ({
+orderSchema.methods.vendorAcceptOrder = async function ({
   vendor,
   selectedDriver,
   timeToReady,
 }) {
   try {
     if (this.vendor.toString() !== vendor._id.toString()) {
-      return { error: "Unauthorized", functionName: "acceptOrder" };
+      return { error: "Unauthorized", functionName: "vendorAcceptOrder" };
     }
     if (this.method === "DELIVERY") {
-      const driverRequest = await this.requestDriver(selectedDriver);
+      const driverRequest = await this.selectDriver(selectedDriver);
       if (driverRequest.error) {
         return { error: driverRequest.error, functionName: "requestDriver" };
       }
     }
     this.estimatedReadyTime = new Date(Date.now() + timeToReady * 60 * 1000);
-    this.disposition = "ACCEPTED";
+    this.disposition = "ACCEPTED_BY_VENDOR";
     return await this.save();
   } catch (error) {
-    return { error, functionName: "acceptOrder" };
+    return { error, functionName: "vendorAcceptOrder" };
   }
 };
 
-orderSchema.methods.requestDriver = async function (driver) {
+orderSchema.methods.selectDriver = async function (driver) {
+  console.log(driver);
   try {
     if (driver.status !== "ACTIVE") {
       return {

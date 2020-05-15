@@ -123,7 +123,7 @@ router
         .populate({
           path: "orderHistory",
           populate: {
-            path: "vendor customer orderItems",
+            path: "vendor customer driver orderItems",
             select: "-password -email",
             populate: "menuItem",
           },
@@ -135,7 +135,7 @@ router
       res.status(500).json({ error });
     }
   })
-  .post("/acceptOrder", async (req, res) => {
+  .post("/vendorAcceptOrder", async (req, res) => {
     try {
       const { orderId, selectedDriverId, timeToReady } = req.body;
       const vendor = req.user;
@@ -144,7 +144,7 @@ router
       }
       const order = await Order.findById(orderId);
       const selectedDriver = await Driver.findById(selectedDriverId);
-      const updatedOrder = await order.acceptOrder({
+      const updatedOrder = await order.vendorAcceptOrder({
         vendor,
         selectedDriver,
         timeToReady,
@@ -166,6 +166,38 @@ router
         .execPopulate();
       res.status(200).json({
         activeOrders: vendorWithOrders.activeOrders,
+      });
+    } catch (error) {
+      await logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/selectDriver", async (req, res) => {
+    try {
+      const { orderId, selectedDriverId } = req.body;
+      const vendor = req.user;
+      if (!vendor.activeOrders.includes(orderId)) {
+        return res.status(401).json({ error: { message: "Unauthorized" } });
+      }
+      const order = await Order.findById(orderId);
+      const selectedDriver = await Driver.findById(selectedDriverId);
+      const updatedOrder = await order.selectDriver(selectedDriver);
+      if (updatedOrder.error) {
+        logError(updatedOrder.error, req, updatedOrder.functionName);
+        return res.status(500).json({ error: updatedOrder.error });
+      }
+      const { activeOrders } = await vendor
+        .populate({
+          path: "activeOrders",
+          populate: {
+            path: "vendor customer address orderItems",
+            select: "-password -email",
+            populate: "menuItem",
+          },
+        })
+        .execPopulate();
+      res.status(200).json({
+        activeOrders,
       });
     } catch (error) {
       await logError(error, req);

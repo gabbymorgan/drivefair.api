@@ -77,7 +77,7 @@ driverSchema.methods.addOrderToRoute = async function (orderId) {
     } else {
       route.orders.push(orderId);
     }
-    order.driver = driverWithRoute._id;
+    order.driver = this._id;
     await route.save();
     await order.save();
     await this.save();
@@ -87,27 +87,9 @@ driverSchema.methods.addOrderToRoute = async function (orderId) {
   }
 };
 
-driverSchema.methods.pickUpOrder = async function (orderId) {
-  try {
-    const order = await Order.findById(orderId);
-    order.disposition = "";
-    order.driver = this._id;
-    this.route.push(orderId);
-    await order.save();
-    await this.save();
-    const driverWithRoute = await this.populate({
-      path: "route",
-      populate: { path: "customer vendor address", select: "-password" },
-    }).execPopulate();
-    return driverWithRoute.route;
-  } catch (error) {
-    return { error, functionName: "pickUpOrder" };
-  }
-};
-
 driverSchema.methods.toggleStatus = async function (status) {
   const route = await this.getRoute();
-  if (route && route.orders.length && status === "INACTIVE") {
+  if (route.orders && route.orders.length && status === "INACTIVE") {
     return {
       error: "There are still active orders on your route!",
       functionName: "toggleStatus",
