@@ -17,6 +17,10 @@ before(async () => {
   await mongoose.connection.db.dropDatabase();
 });
 
+after(() => {
+  requester.close();
+});
+
 const models = {
   vendors: Vendor,
   customers: Customer,
