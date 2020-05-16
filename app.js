@@ -26,6 +26,9 @@ mongoose
   )
   .then(() => {
     console.log("~~~ connected to db ~~~");
+    app.listen(process.env.PORT, () => {
+      console.log(`LISTENING ON PORT ${process.env.PORT}`);
+    });
   })
   .catch((error) => {
     console.log(error);
@@ -35,7 +38,11 @@ const app = express();
 app.use(helmet());
 app.use(express.json());
 app.use(cors());
-app.use(morgan("method :url :status :res[content-length] - :response-time ms"));
+app.use(
+  morgan("method :url :status :res[content-length] - :response-time ms", {
+    skip: (req, res) => process.env.NODE_ENV === "test",
+  })
+);
 app.use(jwtMiddleware);
 app.use(logActivity);
 app.use("/customers", customerRouter);
@@ -55,6 +62,4 @@ app.get("/", async (req, res) => {
   });
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`LISTENING ON PORT ${process.env.PORT}`);
-});
+module.exports = app;

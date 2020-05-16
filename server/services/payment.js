@@ -5,8 +5,8 @@ const createCharge = async (customer, order, vendor, paymentToken) => {
     amount: Math.round((order.total + order.tip) * 100),
     currency: "usd",
     source: paymentToken,
-    description: `Payment by ${customer.firstName} ${customer.lastName} to ${vendor.businessName} - order #${order._id}`,
-    statement_descriptor_suffix: vendor.businessName,
+    description: `${customer.firstName} ${customer.lastName} to ${vendor.businessName} - order #${order._id}`,
+    statement_descriptor_suffix: vendor.businessName.slice(0, 22),
     receipt_email: customer.email,
   });
 };

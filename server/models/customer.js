@@ -34,14 +34,14 @@ customerSchema.methods.validatePassword = async function (password) {
   return await bcrypt.compare(this.password, password);
 };
 
-customerSchema.methods.createCart = async function (orderItem, vendorId) {
+customerSchema.methods.createCart = async function (vendorId) {
   try {
     const newCart = new Order({
       customer: this._id,
       vendor: vendorId,
     });
-    await newCart.addOrderItem(orderItem);
     this.cart = newCart;
+    await newCart.save();
     await this.save();
     return this.cart;
   } catch (error) {

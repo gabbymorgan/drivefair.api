@@ -22,6 +22,7 @@ router
         address,
         description,
         phoneNumber,
+        logoUrl,
       } = req.body;
       const newVendor = new Vendor({
         email,
@@ -30,6 +31,7 @@ router
         address,
         description,
         phoneNumber,
+        logoUrl,
       });
       const savedVendor = await newVendor.save();
       const token = await signToken(savedVendor, "Vendor");

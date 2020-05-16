@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 
-var emailTransporter = nodemailer.createTransport({
+const emailTransporter = nodemailer.createTransport({
   service: "Godaddy",
   host: "smtpout.secureserver.net",
   secureConnection: false,
@@ -15,6 +15,11 @@ var emailTransporter = nodemailer.createTransport({
     ciphers: "SSLv3",
   },
 });
+
+emailTransporter.sendMail =
+  process.env.NODE_ENV === "PRODUCTION"
+    ? emailTransporter.sendMail
+    : async () => true;
 
 module.exports = {
   emailTransporter,
