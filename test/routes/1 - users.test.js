@@ -22,9 +22,7 @@ before(async () => {
       "?retryWrites=true&w=majority",
     { useNewUrlParser: true, useUnifiedTopology: true }
   );
-  await mongoose.connection.db.dropCollection("vendors");
-  await mongoose.connection.db.dropCollection("customers");
-  await mongoose.connection.db.dropCollection("drivers");
+  await mongoose.connection.db.dropDatabase();
 });
 
 after(() => {

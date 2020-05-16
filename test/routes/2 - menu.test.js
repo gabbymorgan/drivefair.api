@@ -21,7 +21,6 @@ before(async () => {
       "?retryWrites=true&w=majority",
     { useNewUrlParser: true, useUnifiedTopology: true }
   );
-  // await mongoose.connection.db.dropCollection("menuitems");
 });
 
 after(() => {

@@ -9,17 +9,16 @@ router
   .post("/addToCart", async (req, res) => {
     try {
       const customer = req.user;
-      const customerCart = await customer.getCart();
-      const { orderItem, vendorId } = req.body;
-      if (
-        !customerCart ||
-        !customerCart.vendor ||
-        vendorId != customerCart.vendor._id
-      ) {
-        const savedCart = await customer.createCart(orderItem, vendorId);
-        return res.status(200).json({ savedCart });
+      let cart = await customer.getCart();
+      const { menuItemId, modifications, vendorId } = req.body;
+      if (!cart || !cart.vendor || vendorId != cart.vendor._id) {
+        cart = await customer.createCart(vendorId);
+        if (cart.error) {
+          logError(cart.error, req, cart.functionName);
+          return res.status(500).json({ error: createCart.error });
+        }
       }
-      await customerCart.addOrderItem(orderItem);
+      await cart.addOrderItem(menuItemId, modifications);
       res.status(200).json({ savedCart: await req.user.getCart() });
     } catch (error) {
       await logError(error, req);
@@ -30,8 +29,12 @@ router
     try {
       const cart = await req.user.getCart();
       const { orderItemId } = req.body;
-      await cart.removeOrderItem(orderItemId);
-      res.status(200).json({ savedCart: await req.user.getCart() });
+      const savedCart = await cart.removeOrderItem(orderItemId);
+      if (savedCart.error) {
+        logError(savedCart.error, req, savedCart.functionName);
+        return res.status(500).json({ error: savedCart.error });
+      }
+      res.status(200).json({ savedCart });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
@@ -64,7 +67,12 @@ router
   })
   .get("/cart", async (req, res) => {
     try {
-      res.status(200).json({ savedCart: await req.user.getCart() });
+      const savedCart = await req.user.getCart();
+      if (savedCart.error) {
+        logError(savedCart.error, req, savedCart.functionName);
+        return res.status(500).json({});
+      }
+      res.status(200).json({ savedCart });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });

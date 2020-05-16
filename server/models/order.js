@@ -1,9 +1,11 @@
 const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Schema.Types;
 
+const MenuItem = require("./menuItem");
+
 const orderItemSchema = new mongoose.Schema({
-  menuItem: { type: ObjectId, ref: "MenuItem" },
-  price: Number,
+  menuItem: { type: ObjectId, ref: "MenuItem", required: true },
+  price: { type: Number, required: true },
   modifications: Object,
 });
 
@@ -42,21 +44,25 @@ const orderSchema = new mongoose.Schema({
   chargeId: String,
 });
 
-orderSchema.methods.addOrderItem = async function (item) {
-  item.price = item.menuItem.price;
-  item.modifications.forEach((modification) => {
+orderSchema.methods.addOrderItem = async function (menuItemId, modifications) {
+  const orderItem = {};
+  const menuItem = await MenuItem.findById(menuItemId);
+  orderItem.price = menuItem.price;
+  orderItem.menuItem = menuItemId;
+  orderItem.modifications = modifications;
+  orderItem.modifications.forEach((modification) => {
     const { options } = modification;
     if (Array.isArray(options)) {
       modification.options.forEach((option) => {
-        item.price += Number(option.price);
+        orderItem.price += Number(option.price);
       });
     } else {
-      item.price += Number(options.price);
+      orderItem.price += Number(options.price);
     }
   });
-  const newOrderItem = await new OrderItem({ ...item }).save();
+  const newOrderItem = await new OrderItem({ ...orderItem }).save();
   this.orderItems.push(newOrderItem);
-  this.subtotal += item.price;
+  this.subtotal += orderItem.price;
   return await this.save();
 };
 
