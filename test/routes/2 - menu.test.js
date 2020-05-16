@@ -10,23 +10,6 @@ const Vendor = require("../../server/models/vendor");
 chai.use(chaiHttp);
 const { expect } = chai;
 
-before(async () => {
-  await mongoose.connect(
-    "mongodb+srv://" +
-      process.env.DB_USER +
-      ":" +
-      process.env.DB_PASS +
-      "@cluster0-h73bz.mongodb.net/" +
-      process.env.DB_CLUSTER +
-      "?retryWrites=true&w=majority",
-    { useNewUrlParser: true, useUnifiedTopology: true }
-  );
-});
-
-after(() => {
-  mongoose.connection.close();
-});
-
 describe("Adds menu items", function () {
   it("Adds menu items", async function () {
     const requests = users.vendors.map(async (vendor) => {

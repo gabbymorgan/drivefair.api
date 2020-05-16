@@ -10,23 +10,11 @@ const Driver = require("../../server/models/driver");
 
 chai.use(chaiHttp);
 const { expect } = chai;
+let requester;
 
 before(async () => {
-  await mongoose.connect(
-    "mongodb+srv://" +
-      process.env.DB_USER +
-      ":" +
-      process.env.DB_PASS +
-      "@cluster0-h73bz.mongodb.net/" +
-      process.env.DB_CLUSTER +
-      "?retryWrites=true&w=majority",
-    { useNewUrlParser: true, useUnifiedTopology: true }
-  );
+  requester = await chai.request(app).keepOpen();
   await mongoose.connection.db.dropDatabase();
-});
-
-after(() => {
-  mongoose.connection.close();
 });
 
 const models = {
@@ -56,8 +44,7 @@ describe("Loads dummy users", function () {
   it("Adds vendors", async function () {
     const requests = users.vendors.map(async (vendor) => {
       const address = combineAddress(vendor);
-      const response = await chai
-        .request(app)
+      const response = await requester
         .post("/vendors/register")
         .type("json")
         .send({ ...vendor, address });
@@ -72,8 +59,7 @@ describe("Loads dummy users", function () {
   it("Adds customers", async function () {
     const requests = users.customers.map(async (customer) => {
       const address = combineAddress(customer);
-      const response = await chai
-        .request(app)
+      const response = await requester
         .post("/customers/register")
         .type("json")
         .send({ ...customer, address });
@@ -91,8 +77,7 @@ describe("Loads dummy users", function () {
   it("Adds drivers", async function () {
     const requests = users.drivers.map(async (driver) => {
       const address = combineAddress(driver);
-      const response = await chai
-        .request(app)
+      const response = await requester
         .post("/drivers/register")
         .type("json")
         .send({ ...driver, address });

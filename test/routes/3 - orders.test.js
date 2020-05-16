@@ -10,23 +10,6 @@ const MenuItem = require("../../server/models/menuItem");
 chai.use(chaiHttp);
 const { expect } = chai;
 
-before(async () => {
-  await mongoose.connect(
-    "mongodb+srv://" +
-      process.env.DB_USER +
-      ":" +
-      process.env.DB_PASS +
-      "@cluster0-h73bz.mongodb.net/" +
-      process.env.DB_CLUSTER +
-      "?retryWrites=true&w=majority",
-    { useNewUrlParser: true, useUnifiedTopology: true }
-  );
-});
-
-after(() => {
-  mongoose.connection.close();
-});
-
 describe("Build a cart and checkout", function () {
   it("Adds orders to cart", async function () {
     const requests = users.customers.map(async (customer) => {
@@ -76,7 +59,7 @@ describe("Build a cart and checkout", function () {
         .type("json")
         .send({
           orderItemId: savedCart.orderItems[0]._id,
-          token: customer.token
+          token: customer.token,
         });
       expect(removeOrderResponse, "Response is status 200").to.have.status(200);
       expect(removeOrderResponse, "To have no error").to.not.have.key("error");
