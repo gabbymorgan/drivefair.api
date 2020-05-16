@@ -5,70 +5,70 @@
       "lastName": "Hayles",
       "email": "jhayles0@huffingtonpost.com",
       "phoneNumber": "515-639-7141",
-      "password": "SnAZCykwLf9"
+      "password": "password"
     },
     {
       "firstName": "Tally",
       "lastName": "Seedhouse",
       "email": "tseedhouse1@un.org",
       "phoneNumber": "511-260-9715",
-      "password": "fhEg0RaDI"
+      "password": "password"
     },
     {
       "firstName": "Chrissy",
       "lastName": "Rutt",
       "email": "crutt2@howstuffworks.com",
       "phoneNumber": "705-970-2986",
-      "password": "iPP5KJ6B"
+      "password": "password"
     },
     {
       "firstName": "Tadeas",
       "lastName": "Schoales",
       "email": "tschoales3@unesco.org",
       "phoneNumber": "506-629-5387",
-      "password": "wulLqD0s31"
+      "password": "password"
     },
     {
       "firstName": "Hyatt",
       "lastName": "Heiton",
       "email": "hheiton4@booking.com",
       "phoneNumber": "229-249-5714",
-      "password": "LJnfw4k9"
+      "password": "password"
     },
     {
       "firstName": "Kizzee",
       "lastName": "Loren",
       "email": "kloren5@google.fr",
       "phoneNumber": "315-289-5313",
-      "password": "OhAIEqq"
+      "password": "password"
     },
     {
       "firstName": "Merwyn",
       "lastName": "Revey",
       "email": "mrevey6@facebook.com",
       "phoneNumber": "690-106-8369",
-      "password": "WEzyqRfv"
+      "password": "password"
     },
     {
       "firstName": "Garland",
       "lastName": "Loseby",
       "email": "gloseby7@myspace.com",
       "phoneNumber": "575-614-2134",
-      "password": "6RveAnvT"
+      "password": "password"
     },
     {
       "firstName": "Hyacintha",
       "lastName": "Matejka",
       "email": "hmatejka8@ebay.co.uk",
       "phoneNumber": "338-400-4045",
-      "password": "AXesNm2QEMOq"
+      "password": "password"
     },
     {
       "firstName": "Doti",
       "lastName": "Jesse",
       "email": "djesse9@merriam-webster.com",
       "phoneNumber": "306-574-2767",
-      "password": "kg4vnFTb"
+      "password": "password"
     }
   ],
   "vendors": [
@@ -76,111 +76,121 @@
       "businessName": "Herzog, Bernhard and Abbott",
       "email": "dberrick0@wsj.com",
       "phoneNumber": "919-409-3971",
-      "password": "dAFVFoF",
+      "password": "password",
       "street": "709 Elka Drive",
       "unit": 55,
       "city": "Raleigh",
       "state": "North Carolina",
-      "zip": "27635"
+      "zip": "27635",
+      "logoUrl": "S3OVfWX"
     },
     {
       "businessName": "Baumbach-Collier",
       "email": "ocypler1@barnesandnoble.com",
       "phoneNumber": "989-542-3318",
-      "password": "msfjOp",
+      "password": "password",
       "street": "5523 Coleman Way",
       "unit": 89,
       "city": "Saginaw",
       "state": "Michigan",
-      "zip": "48604"
+      "zip": "48604",
+      "logoUrl": "S3OVfWX"
     },
     {
       "businessName": "Pouros-Greenfelder",
       "email": "smenis2@comcast.net",
       "phoneNumber": "770-499-2932",
-      "password": "xBviH92",
+      "password": "password",
       "street": "71960 Kropf Circle",
       "unit": 9,
       "city": "Atlanta",
       "state": "Georgia",
-      "zip": "30328"
+      "zip": "30328",
+      "logoUrl": "S3OVfWX"
     },
     {
       "businessName": "Connelly-Dickinson",
       "email": "kbrownbill3@cdc.gov",
       "phoneNumber": "281-760-4812",
-      "password": "UpBtRwd84x1Y",
+      "password": "password",
       "street": "12 Banding Court",
       "unit": 69,
       "city": "Houston",
       "state": "Texas",
-      "zip": "77293"
+      "zip": "77293",
+      "logoUrl": "S3OVfWX"
     },
     {
       "businessName": "Wehner, Spinka and Rowe",
       "email": "ocollum4@thetimes.co.uk",
       "phoneNumber": "240-458-4680",
-      "password": "JODNJVeQq",
+      "password": "password",
       "street": "57 Clyde Gallagher Alley",
       "unit": 63,
       "city": "Silver Spring",
       "state": "Maryland",
-      "zip": "20918"
+      "zip": "20918",
+      "logoUrl": "S3OVfWX"
     },
     {
       "businessName": "Kovacek Inc",
       "email": "cdavitt5@mapquest.com",
       "phoneNumber": "415-184-8225",
-      "password": "10UsEtc",
+      "password": "password",
       "street": "0692 Lotheville Point",
       "unit": 47,
       "city": "San Francisco",
       "state": "California",
-      "zip": "94132"
+      "zip": "94132",
+      "logoUrl": "S3OVfWX"
     },
     {
       "businessName": "Crist and Sons",
       "email": "jlipmann6@cdc.gov",
       "phoneNumber": "619-109-0941",
-      "password": "KXjvALReO",
+      "password": "password",
       "street": "41 Lighthouse Bay Park",
       "unit": 10,
       "city": "San Diego",
       "state": "California",
-      "zip": "92127"
+      "zip": "92127",
+      "logoUrl": "S3OVfWX"
     },
     {
       "businessName": "Hessel, Greenholt and McLaughlin",
       "email": "ekramer7@nasa.gov",
       "phoneNumber": "313-396-0497",
-      "password": "c87PMkf5",
+      "password": "password",
       "street": "0438 Mesta Crossing",
       "unit": 61,
       "city": "Detroit",
       "state": "Michigan",
-      "zip": "48232"
+      "zip": "48232",
+      "logoUrl": "S3OVfWX"
     },
     {
       "businessName": "Schultz-O'Conner",
       "email": "vbrinkley8@apple.com",
       "phoneNumber": "907-497-1219",
-      "password": "BgYbsN",
+      "password": "password",
       "street": "237 Schiller Alley",
       "unit": 30,
       "city": "Anchorage",
       "state": "Alaska",
-      "zip": "99522"
+      "zip": "99522",
+      "logoUrl": "S3OVfWX"
     },
     {
       "businessName": "Klocko, Muller and Dicki",
       "email": "vzanetto9@mac.com",
       "phoneNumber": "773-589-0611",
-      "password": "Df7H213fyE",
+      "password": "password",
       "street": "00398 Mandrake Hill",
       "unit": 33,
       "city": "Chicago",
       "state": "Illinois",
-      "zip": "60614"
+      "zip": "60614",
+      "logoUrl": "S3OVfWX"
     }
   ],
   "drivers": [
