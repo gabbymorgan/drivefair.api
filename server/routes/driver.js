@@ -1,7 +1,11 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const Driver = require("../models/driver");
-const { emailTransporter } = require("../services/communications");
+const Message = require("../models/message");
+const {
+  emailTransporter,
+  sendPushNotification,
+} = require("../services/communications");
 const logError = require("../services/errorLog");
 const {
   signToken,
@@ -179,6 +183,49 @@ router
       driver.longitude = longitude;
       const savedDriver = await driver.save();
       res.status(200).json({ savedDriver });
+    } catch (error) {
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/addDeviceToken", async (req, res) => {
+    try {
+      const driver = req.user;
+      const { deviceToken } = req.body;
+      const addDeviceTokenResponse = await driver.addDeviceToken(deviceToken);
+      if (addDeviceTokenResponse.error) {
+        const { error, functionName } = addDeviceTokenResponse;
+        logError(error, req, functionName);
+        return res.status(500).json({ error });
+      }
+    } catch (error) {
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/sendMessage", async (req, res) => {
+    try {
+      const { driverId, title, body } = req.body;
+      const { user, userModel } = req;
+      const driver = await Driver.findById(driverId);
+      const message = new Message({
+        recipient: driverId,
+        recipientModel: "Driver",
+        sender: user._id,
+        senderModel: userModel,
+        title,
+        body,
+      });
+      const { successCount, results, multicastId } = await sendPushNotification(
+        driver.deviceTokens,
+        title,
+        body
+      );
+      message.successCount = successCount;
+      message.results = results;
+      message.multicastId = multicastId;
+      await message.save();
+      res.status(200).json(message);
     } catch (error) {
       logError(error, req);
       res.status(500).json({ error });

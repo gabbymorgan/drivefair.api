@@ -28,6 +28,7 @@ const driverSchema = new mongoose.Schema({
   latitude: Number,
   longitude: Number,
   status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "INACTIVE" },
+  deviceTokens: [String],
 });
 
 driverSchema.methods.validatePassword = async function (password) {
@@ -97,6 +98,13 @@ driverSchema.methods.toggleStatus = async function (status) {
   this.status = status;
   const savedDriver = await this.save();
   return savedDriver.status;
+};
+
+driverSchema.methods.addDeviceToken = async function (deviceToken) {
+  this.deviceTokens.pull(deviceToken);
+  this.deviceTokens.push(deviceToken);
+  const savedDriver = await this.save();
+  return savedDriver.deviceTokens;
 };
 
 module.exports = mongoose.model("Driver", driverSchema);

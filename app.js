@@ -5,6 +5,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const { emailTransporter } = require("./server/services/communications");
 const { jwtMiddleware, logActivity } = require("./server/services/middleware");
+const admin = require("firebase-admin");
 
 const orderRouter = require("./server/routes/order");
 const settingsRouter = require("./server/routes/settings");
@@ -12,6 +13,13 @@ const vendorRouter = require("./server/routes/vendor");
 const customerRouter = require("./server/routes/customer");
 const driverRouter = require("./server/routes/driver");
 const routeRouter = require("./server/routes/deliveryRoute");
+
+const serviceAccount = require(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://delivery-2a108.firebaseio.com",
+});
 
 dbUrls = {
   development: "mongodb://127.0.0.1:27017/delivery",

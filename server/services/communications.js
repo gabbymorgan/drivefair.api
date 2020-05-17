@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const admin = require("firebase-admin");
 
 const emailTransporter = nodemailer.createTransport({
   service: "Godaddy",
@@ -21,6 +22,23 @@ emailTransporter.sendMail =
     ? emailTransporter.sendMail
     : async () => true;
 
+const sendPushNotification = async (deviceTokens, title, body) => {
+  const message = await admin.messaging().sendToDevice(
+    deviceTokens,
+    {
+      notification: { title, body },
+    },
+    {
+      // Required for background/quit data-only messages on iOS
+      contentAvailable: true,
+      // Required for background/quit data-only messages on Android
+      priority: "high",
+    }
+  );
+  return message;
+};
+
 module.exports = {
   emailTransporter,
+  sendPushNotification,
 };
