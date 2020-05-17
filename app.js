@@ -14,7 +14,7 @@ const customerRouter = require("./server/routes/customer");
 const driverRouter = require("./server/routes/driver");
 const routeRouter = require("./server/routes/deliveryRoute");
 
-const serviceAccount = require(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+const serviceAccount = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),

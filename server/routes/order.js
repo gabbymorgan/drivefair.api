@@ -18,8 +18,8 @@ router
           return res.status(500).json({ error: createCart.error });
         }
       }
-      await cart.addOrderItem(menuItemId, modifications);
-      res.status(200).json({ savedCart: await req.user.getCart() });
+      const savedCart = await cart.addOrderItem(menuItemId, modifications);
+      res.status(200).json({ savedCart });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });

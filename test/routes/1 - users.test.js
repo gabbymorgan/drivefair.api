@@ -11,9 +11,25 @@ const Driver = require("../../server/models/driver");
 chai.use(chaiHttp);
 const { expect } = chai;
 let requester;
+const dbUrls = {
+  development: "mongodb://127.0.0.1:27017/delivery",
+  test: "mongodb://127.0.0.1:27017/delivery-test",
+  production:
+    "mongodb+srv://" +
+    process.env.DB_USER +
+    ":" +
+    process.env.DB_PASS +
+    "@cluster0-h73bz.mongodb.net/" +
+    process.env.DB_CLUSTER +
+    "?retryWrites=true&w=majority",
+};
 
 before(async () => {
   requester = await chai.request(app).keepOpen();
+  await mongoose.connect(dbUrls[process.env.NODE_ENV], {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
   await mongoose.connection.db.dropDatabase();
 });
 
