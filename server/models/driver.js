@@ -2,7 +2,8 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const Order = require("./order");
 const DeliveryRoute = require("./deliveryRoute");
-const { emailTransporter } = require("../services/communications");
+const Message = require("./message");
+const { sendPushNotification } = require("../services/communications");
 const OrderStatus = require("../constants/static-pages/order-status");
 const { ObjectId } = mongoose.Schema.Types;
 
@@ -37,8 +38,13 @@ driverSchema.methods.validatePassword = async function (password) {
 
 driverSchema.methods.getRoute = async function () {
   try {
-    const route = await DeliveryRoute.findById(this.route);
-    const populatedRoute = await route
+    let route = await DeliveryRoute.findById(this.route);
+    if (!route) {
+      route = await new DeliveryRoute({ driver: this._id }).save();
+      this.route = route._id;
+      await this.save();
+    }
+    await route
       .populate({
         path: "orders",
         populate: {
@@ -48,42 +54,9 @@ driverSchema.methods.getRoute = async function () {
       })
       .populate("vendor")
       .execPopulate();
-    return populatedRoute;
-  } catch (error) {
-    return { error, functionName: "getRoute" };
-  }
-};
-
-driverSchema.methods.addOrderToRoute = async function (orderId) {
-  try {
-    const order = await Order.findById(orderId);
-    const driverWithRoute = await this.populate({
-      path: "route",
-      populate: { path: "customer vendor", select: "-password" },
-    }).execPopulate();
-    let { route } = driverWithRoute;
-    if (!route) {
-      route = new DeliveryRoute({
-        orders: [orderId],
-        vendor: order.vendor,
-        driver: this._id,
-      });
-      this.route = route._id;
-    } else if (route.vendor._id.toString() !== order.vendor.toString()) {
-      return {
-        error: "Cannot add order from different vendor to route in progress.",
-        functionName: "addOrderToRoute",
-      };
-    } else {
-      route.orders.push(orderId);
-    }
-    order.driver = this._id;
-    await route.save();
-    await order.save();
-    await this.save();
     return route;
   } catch (error) {
-    return { error, functionName: "addOrderToRoute" };
+    return { error, functionName: "getRoute" };
   }
 };
 
@@ -105,6 +78,44 @@ driverSchema.methods.addDeviceToken = async function (deviceToken) {
   this.deviceTokens.push(deviceToken);
   const savedDriver = await this.save();
   return savedDriver.deviceTokens;
+};
+
+driverSchema.methods.requestDriver = async function (orderId) {
+  const order = await Order.findById(orderId);
+  await order.populate("vendor").execPopulate();
+  if (order.driver) {
+    return { error: "Order already has driver assigned." };
+  }
+  try {
+    const title = "Incoming Order!";
+    const body = "Will you accept?";
+    const data = {
+      orderId: orderId.toString(),
+      messageType: "REQUEST_DRIVER",
+      openModal: "true",
+    };
+    const { successCount, results, multicastId } = await sendPushNotification(
+      this.deviceTokens,
+      title,
+      body,
+      data
+    );
+    const message = new Message({
+      recipient: this._id,
+      recipientModel: "Driver",
+      sender: order.vendor._id,
+      senderModel: "Vendor",
+      title,
+      body,
+      successCount,
+      results,
+      multicastId,
+    });
+    const savedMessage = await message.save();
+    return savedMessage;
+  } catch (error) {
+    return { error };
+  }
 };
 
 module.exports = mongoose.model("Driver", driverSchema);

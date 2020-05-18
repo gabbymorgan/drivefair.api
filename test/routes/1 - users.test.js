@@ -60,8 +60,8 @@ const combineAddress = (userData) => {
   };
 };
 
-describe("Loads dummy users", function () {
-  it("Adds vendors", async function () {
+describe("Users", function () {
+  it("adds vendors", async function () {
     const requests = users.vendors.map(async (vendor) => {
       const address = combineAddress(vendor);
       const response = await requester
@@ -76,7 +76,7 @@ describe("Loads dummy users", function () {
     });
     await Promise.all(requests);
   });
-  it("Adds customers", async function () {
+  it("adds customers", async function () {
     const requests = users.customers.map(async (customer) => {
       const address = combineAddress(customer);
       const response = await requester
@@ -94,7 +94,7 @@ describe("Loads dummy users", function () {
     });
     await Promise.all(requests);
   });
-  it("Adds drivers", async function () {
+  it("adds drivers", async function () {
     const requests = users.drivers.map(async (driver) => {
       const address = combineAddress(driver);
       const response = await requester

@@ -198,34 +198,30 @@ router
         logError(error, req, functionName);
         return res.status(500).json({ error });
       }
+      res.status(200).json({ success: true });
     } catch (error) {
       logError(error, req);
       res.status(500).json({ error });
     }
   })
-  .post("/sendMessage", async (req, res) => {
+  .post("/requestDriver", async (req, res) => {
     try {
-      const { driverId, title, body } = req.body;
+      const { driverId, orderId } = req.body;
       const { user, userModel } = req;
+      if (userModel !== "Vendor") {
+        return res.status(401).json({ error: "Unauthorized." });
+      }
       const driver = await Driver.findById(driverId);
-      const message = new Message({
-        recipient: driverId,
-        recipientModel: "Driver",
-        sender: user._id,
-        senderModel: userModel,
-        title,
-        body,
-      });
-      const { successCount, results, multicastId } = await sendPushNotification(
-        driver.deviceTokens,
-        title,
-        body
+      const requestDriverResponse = await driver.requestDriver(
+        user._id,
+        orderId
       );
-      message.successCount = successCount;
-      message.results = results;
-      message.multicastId = multicastId;
-      await message.save();
-      res.status(200).json(message);
+      if (requestDriverResponse.error) {
+        const { error, functionName } = requestDriverResponse;
+        logError(error, req, functionName);
+        return res.status(500).json({ error });
+      }
+      res.status(200).json(requestDriverResponse);
     } catch (error) {
       logError(error, req);
       res.status(500).json({ error });

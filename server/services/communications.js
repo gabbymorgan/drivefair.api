@@ -22,11 +22,12 @@ emailTransporter.sendMail =
     ? emailTransporter.sendMail
     : async () => true;
 
-const sendPushNotification = async (deviceTokens, title, body) => {
+const sendPushNotification = async (deviceTokens, title, body, data) => {
   const message = await admin.messaging().sendToDevice(
     deviceTokens,
     {
       notification: { title, body },
+      data,
     },
     {
       // Required for background/quit data-only messages on iOS

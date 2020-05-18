@@ -88,31 +88,29 @@ orderSchema.methods.vendorAcceptOrder = async function ({
       return { error: "Unauthorized", functionName: "vendorAcceptOrder" };
     }
     if (this.method === "DELIVERY") {
-      const driverRequest = await this.selectDriver(selectedDriver);
+      const driverRequest = await selectedDriver.requestDriver(this._id);
+      console.log({driverRequest})
       if (driverRequest.error) {
         return { error: driverRequest.error, functionName: "requestDriver" };
       }
     }
     this.estimatedReadyTime = new Date(Date.now() + timeToReady * 60 * 1000);
     this.disposition = "ACCEPTED_BY_VENDOR";
-    return await this.save();
+    await this.save();
+    await this.populate({
+      path: "activeOrders",
+      populate: {
+        path: "vendor customer address orderItems",
+        select: "-password -email",
+        populate: "menuItem",
+      },
+    }).execPopulate();
+    return this;
   } catch (error) {
     return { error, functionName: "vendorAcceptOrder" };
   }
 };
 
-orderSchema.methods.selectDriver = async function (driver) {
-  try {
-    if (driver.status !== "ACTIVE") {
-      return {
-        error: "Selected driver is currently inactive.",
-      };
-    }
-    return await driver.addOrderToRoute(this._id);
-  } catch (error) {
-    return { error };
-  }
-};
 
 const OrderItem = mongoose.model("OrderItem", orderItemSchema);
 const Order = mongoose.model("Order", orderSchema);

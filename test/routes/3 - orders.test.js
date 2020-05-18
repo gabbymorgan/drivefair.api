@@ -10,9 +10,8 @@ const MenuItem = require("../../server/models/menuItem");
 
 chai.use(chaiHttp);
 const { expect } = chai;
-let savedCart;
 
-describe("Place an order for pickup", function () {
+describe("Pickup Orders", function () {
   let expectedOrderItemsLength = 0;
   it("adds orders to cart", async function () {
     const requests = () => {
@@ -87,9 +86,48 @@ describe("Place an order for pickup", function () {
     });
     await Promise.all(requests);
   });
+  it("ready and sell pickup orders", async function () {
+    const requests = users.vendors.map(async (vendor) => {
+      const { email, password } = vendor;
+      const login = await chai
+        .request(app)
+        .post("/vendors/login")
+        .type("json")
+        .send({ email, password });
+      vendor.token = login.body.token;
+      const orderRequests = login.body.profile.activeOrders.map(async (orderId) => {
+        const readyResponse = await chai
+          .request(app)
+          .post("/orders/readyOrder")
+          .type("json")
+          .send({
+            orderId,
+            token: vendor.token,
+          });
+        expect(readyResponse, "Response is status 200").to.have.status(200);
+        expect(readyResponse.body, "Response has no error").to.not.have.key(
+          "error"
+        );
+        const pickUpResponse = await chai
+          .request(app)
+          .post("/orders/customerPickUpOrder")
+          .type("json")
+          .send({
+            orderId,
+            token: vendor.token,
+          });
+        expect(pickUpResponse, "Response is status 200").to.have.status(200);
+        expect(pickUpResponse.body, "Response has no error").to.not.have.key(
+          "error"
+        );
+      });
+      await Promise.all(orderRequests);
+    });
+    await Promise.all(requests);
+  });
 });
 
-describe("Place an order for delivery", function () {
+describe("Delivery Orders", function () {
   const address = {
     street: "1234 Fake St",
     unit: "10",
@@ -191,7 +229,7 @@ describe("Place an order for delivery", function () {
           .type("json")
           .send({
             token: customer.token,
-            addressId: customer.addresses[0]._id
+            addressId: customer.addresses[0]._id,
           });
         expect(response, "Response is status 200").to.have.status(200);
         expect(response.body, "Response has no error").to.not.have.key("error");

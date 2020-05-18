@@ -10,8 +10,8 @@ const Vendor = require("../../server/models/vendor");
 chai.use(chaiHttp);
 const { expect } = chai;
 
-describe("Adds menu items", function () {
-  it("Adds menu items", async function () {
+describe("Menu Items", function () {
+  it("adds menu items", async function () {
     const requests = users.vendors.map(async (vendor) => {
       const { email, password } = vendor;
       const menuItem = menuItems[Math.floor(Math.random() * menuItems.length)];
