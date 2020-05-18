@@ -39,6 +39,7 @@ deliveryRouteSchema.methods.acceptOrder = async function (orderId) {
     ) {
       return { error: "Order not available.", functionName: "acceptOrder" };
     }
+    this.vendor = order.vendor._id;
     order.disposition = "ACCEPTED_BY_DRIVER";
     order.driver = this.vendor;
     this.orders.pull(orderId);

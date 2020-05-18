@@ -48,7 +48,7 @@ driverSchema.methods.getRoute = async function () {
       .populate({
         path: "orders",
         populate: {
-          path: "address customer orderItems",
+          path: "address customer vendor orderItems",
           populate: { path: "menuItem", populate: "modifications" },
         },
       })
