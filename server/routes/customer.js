@@ -42,7 +42,7 @@ router
         .json({ token, profile: savedCustomer, userType: "customer" });
       await emailTransporter.sendMail({
         to: email,
-        from: '"Denton Delivers", gabby@gabriellapelton.com',
+        from: process.env.EMAIL_USER,
         subject: `Thanks for signing up, ${firstName}!`,
         html: emailConfirmation.request(
           "customers",
@@ -111,7 +111,7 @@ router
       const emailConfirmationToken = await signEmailToken(customer, "Customer");
       await emailTransporter.sendMail({
         to: customer.email,
-        from: '"Denton Delivers", gabby@gabriellapelton.com',
+        from: process.env.EMAIL_USER,
         subject: `Thanks for signing up, ${customer.firstName}!`,
         html: emailConfirmation.request(
           "customers",
