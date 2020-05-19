@@ -14,10 +14,12 @@ const customerRouter = require("./server/routes/customer");
 const driverRouter = require("./server/routes/driver");
 const routeRouter = require("./server/routes/deliveryRoute");
 
-const serviceAccount = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert({
+    "project_id": "delivery-2a108",
+    "private_key": process.env.FIREBASE_PRIVATE_KEY,
+    "client_email": process.env.FIREBASE_CLIENT_EMAIL,
+  }),
   databaseURL: "https://delivery-2a108.firebaseio.com",
 });
 
