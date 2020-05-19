@@ -36,7 +36,7 @@ router
       res.status(200).json({ token, profile: savedDriver, userType: "driver" });
       await emailTransporter.sendMail({
         to: email,
-        from: '"Denton Delivers", gabby@gabriellapelton.com',
+        from: process.env.EMAIL_USER,
         subject: `Thanks for signing up, ${firstName}!`,
         html: emailConfirmation.request(
           "drivers",
@@ -103,7 +103,7 @@ router
       const emailConfirmationToken = await signEmailToken(driver, "Driver");
       await emailTransporter.sendMail({
         to: driver.email,
-        from: '"Denton Delivers", gabby@gabriellapelton.com',
+        from: process.env.EMAIL_USER,
         subject: `Thanks for signing up, ${driver.firstName}!`,
         html: emailConfirmation.request(
           "drivers",

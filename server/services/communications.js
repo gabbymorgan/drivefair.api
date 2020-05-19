@@ -2,8 +2,8 @@ const nodemailer = require("nodemailer");
 const admin = require("firebase-admin");
 
 const emailTransporter = nodemailer.createTransport({
-  service: "Godaddy",
-  host: "smtpout.secureserver.net",
+  service: process.env.EMAIL_SERVICE,
+  host: process.env.EMAIL_HOST,
   secureConnection: false,
   port: 465,
 
@@ -13,7 +13,7 @@ const emailTransporter = nodemailer.createTransport({
   },
 
   tls: {
-    ciphers: "SSLv3",
+    ciphers: process.env.EMAIL_CIPHERS.split(","),
   },
 });
 
