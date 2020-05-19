@@ -5,24 +5,6 @@ const logError = require("../services/errorLog");
 const router = express.Router();
 
 router
-  .post("/addToRoute", async (req, res) => {
-    try {
-      const { orderId, driverId } = req.body;
-      const driver = await Driver.findById(driverId);
-      const route = await driver.addToRoute(orderId);
-      if (route.error) {
-        const { error, functionName } = route;
-        logError(error, req, functionName);
-        return res.status(500).json({ error });
-      }
-      res.status(200).json({
-        route,
-      });
-    } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
-    }
-  })
   .get("/", async (req, res) => {
     try {
       const driver = req.user;
@@ -37,11 +19,11 @@ router
     try {
       const { orderId } = req.body;
       const driver = req.user;
-      const route = await driver.getRoute();
+      const route = await req.user.getRoute();
       const response = await route.acceptOrder(orderId);
       if (response.error) {
         logError(response.error, req, response.functionName);
-        return res.status(500).json({ error });
+        return res.status(500).json({ error: response.error });
       }
       const updatedRoute = await driver.getRoute();
       res.status(200).json({ route: updatedRoute });

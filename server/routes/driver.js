@@ -1,7 +1,11 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const Driver = require("../models/driver");
-const { emailTransporter } = require("../services/communications");
+const Message = require("../models/message");
+const {
+  emailTransporter,
+  sendPushNotification,
+} = require("../services/communications");
 const logError = require("../services/errorLog");
 const {
   signToken,
@@ -179,6 +183,45 @@ router
       driver.longitude = longitude;
       const savedDriver = await driver.save();
       res.status(200).json({ savedDriver });
+    } catch (error) {
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/addDeviceToken", async (req, res) => {
+    try {
+      const driver = req.user;
+      const { deviceToken } = req.body;
+      const addDeviceTokenResponse = await driver.addDeviceToken(deviceToken);
+      if (addDeviceTokenResponse.error) {
+        const { error, functionName } = addDeviceTokenResponse;
+        logError(error, req, functionName);
+        return res.status(500).json({ error });
+      }
+      res.status(200).json({ success: true });
+    } catch (error) {
+      logError(error, req);
+      res.status(500).json({ error });
+    }
+  })
+  .post("/requestDriver", async (req, res) => {
+    try {
+      const { driverId, orderId } = req.body;
+      const { user, userModel } = req;
+      if (userModel !== "Vendor") {
+        return res.status(401).json({ error: "Unauthorized." });
+      }
+      const driver = await Driver.findById(driverId);
+      const requestDriverResponse = await driver.requestDriver(
+        user._id,
+        orderId
+      );
+      if (requestDriverResponse.error) {
+        const { error, functionName } = requestDriverResponse;
+        logError(error, req, functionName);
+        return res.status(500).json({ error });
+      }
+      res.status(200).json(requestDriverResponse);
     } catch (error) {
       logError(error, req);
       res.status(500).json({ error });

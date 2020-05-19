@@ -18,8 +18,8 @@ router
           return res.status(500).json({ error: createCart.error });
         }
       }
-      await cart.addOrderItem(menuItemId, modifications);
-      res.status(200).json({ savedCart: await req.user.getCart() });
+      const savedCart = await cart.addOrderItem(menuItemId, modifications);
+      res.status(200).json({ savedCart });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
@@ -152,44 +152,33 @@ router
       }
       const order = await Order.findById(orderId);
       const selectedDriver = await Driver.findById(selectedDriverId);
-      const updatedOrder = await order.vendorAcceptOrder({
+      const acceptOrderResponse = await order.vendorAcceptOrder({
         vendor,
         selectedDriver,
         timeToReady,
       });
-      if (updatedOrder.error) {
-        const { error, functionName } = updatedOrder;
+      if (acceptOrderResponse.error) {
+        const { error, functionName } = acceptOrderResponse;
         logError(error, req, functionName);
         return res.status(500).json({ error });
       }
-      const vendorWithOrders = await vendor
-        .populate({
-          path: "activeOrders",
-          populate: {
-            path: "vendor customer address orderItems",
-            select: "-password -email",
-            populate: "menuItem",
-          },
-        })
-        .execPopulate();
       res.status(200).json({
-        activeOrders: vendorWithOrders.activeOrders,
+        activeOrders: acceptOrderResponse.activeOrders,
       });
     } catch (error) {
       await logError(error, req);
       res.status(500).json({ error });
     }
   })
-  .post("/selectDriver", async (req, res) => {
+  .post("/requestDriver", async (req, res) => {
     try {
       const { orderId, selectedDriverId } = req.body;
       const vendor = req.user;
       if (!vendor.activeOrders.includes(orderId)) {
         return res.status(401).json({ error: { message: "Unauthorized" } });
       }
-      const order = await Order.findById(orderId);
       const selectedDriver = await Driver.findById(selectedDriverId);
-      const updatedOrder = await order.selectDriver(selectedDriver);
+      const updatedOrder = await selectedDriver.requestDriver(orderId);
       if (updatedOrder.error) {
         logError(updatedOrder.error, req, updatedOrder.functionName);
         return res.status(500).json({ error: updatedOrder.error });

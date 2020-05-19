@@ -5,6 +5,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const { emailTransporter } = require("./server/services/communications");
 const { jwtMiddleware, logActivity } = require("./server/services/middleware");
+const admin = require("firebase-admin");
 
 const orderRouter = require("./server/routes/order");
 const settingsRouter = require("./server/routes/settings");
@@ -13,17 +14,31 @@ const customerRouter = require("./server/routes/customer");
 const driverRouter = require("./server/routes/driver");
 const routeRouter = require("./server/routes/deliveryRoute");
 
-mongoose
-  .connect(
+const serviceAccount = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://delivery-2a108.firebaseio.com",
+});
+
+dbUrls = {
+  development: "mongodb://127.0.0.1:27017/delivery",
+  test: "mongodb://127.0.0.1:27017/delivery-test",
+  production:
     "mongodb+srv://" +
-      process.env.DB_USER +
-      ":" +
-      process.env.DB_PASS +
-      "@cluster0-h73bz.mongodb.net/" +
-      process.env.DB_CLUSTER +
-      "?retryWrites=true&w=majority",
-    { useNewUrlParser: true, useUnifiedTopology: true }
-  )
+    process.env.DB_USER +
+    ":" +
+    process.env.DB_PASS +
+    "@cluster0-h73bz.mongodb.net/" +
+    process.env.DB_CLUSTER +
+    "?retryWrites=true&w=majority",
+};
+
+mongoose
+  .connect(dbUrls[process.env.NODE_ENV], {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => {
     console.log("~~~ connected to db ~~~");
     app.listen(process.env.PORT, () => {

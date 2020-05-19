@@ -7,16 +7,19 @@ const Driver = require("../models/driver");
 const models = {
   Vendor,
   Customer,
-  Driver
+  Driver,
 };
 
 const { JWT_EXPIRY_INTERVAL, JWT_SECRET_KEY } = process.env;
 
-const validateToken = async (token) => {
+const validateToken = async (token, req, res) => {
   try {
     const { data } = jwt.verify(token, JWT_SECRET_KEY);
     const { email, userType } = data;
     const foundUser = await models[userType].findOne({ email });
+    if (req) {
+      req.userModel = userType;
+    }
     return foundUser;
   } catch (error) {
     return { error };

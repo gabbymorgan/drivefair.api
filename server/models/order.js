@@ -18,7 +18,7 @@ const orderSchema = new mongoose.Schema({
   orderItems: [{ type: ObjectId, ref: "OrderItem" }],
   method: { type: String, enums: ["DELIVERY", "PICKUP"], default: "PICKUP" },
   subtotal: { type: Number, default: 0 },
-  tip: { type: Number, min: 0 },
+  tip: { type: Number, min: 0, default: 0 },
   total: { type: Number, default: 0 },
   estimatedReadyTime: { type: Date },
   actualReadyTime: { type: Date },
@@ -47,10 +47,13 @@ const orderSchema = new mongoose.Schema({
 orderSchema.methods.addOrderItem = async function (menuItemId, modifications) {
   const orderItem = {};
   const menuItem = await MenuItem.findById(menuItemId);
-  orderItem.price = menuItem.price;
-  orderItem.menuItem = menuItemId;
-  orderItem.modifications = modifications;
-  orderItem.modifications.forEach((modification) => {
+  const newOrderItem = await new OrderItem({
+    price: menuItem.price,
+    menuItem,
+    modifications,
+  });
+
+  newOrderItem.modifications.forEach((modification) => {
     const { options } = modification;
     if (Array.isArray(options)) {
       modification.options.forEach((option) => {
@@ -60,10 +63,11 @@ orderSchema.methods.addOrderItem = async function (menuItemId, modifications) {
       orderItem.price += Number(options.price);
     }
   });
-  const newOrderItem = await new OrderItem({ ...orderItem }).save();
-  this.orderItems.push(newOrderItem);
-  this.subtotal += orderItem.price;
-  return await this.save();
+  await newOrderItem.save();
+  this.orderItems.push(newOrderItem._id);
+  this.subtotal += newOrderItem.price;
+  const updatedOrder = await this.save();
+  return updatedOrder;
 };
 
 orderSchema.methods.removeOrderItem = async function (itemId) {
@@ -84,32 +88,28 @@ orderSchema.methods.vendorAcceptOrder = async function ({
       return { error: "Unauthorized", functionName: "vendorAcceptOrder" };
     }
     if (this.method === "DELIVERY") {
-      const driverRequest = await this.selectDriver(selectedDriver);
+      const driverRequest = await selectedDriver.requestDriver(this._id);
       if (driverRequest.error) {
         return { error: driverRequest.error, functionName: "requestDriver" };
       }
     }
     this.estimatedReadyTime = new Date(Date.now() + timeToReady * 60 * 1000);
     this.disposition = "ACCEPTED_BY_VENDOR";
-    return await this.save();
+    await this.save();
+    await this.populate({
+      path: "activeOrders",
+      populate: {
+        path: "vendor customer address orderItems",
+        select: "-password -email",
+        populate: "menuItem",
+      },
+    }).execPopulate();
+    return this;
   } catch (error) {
     return { error, functionName: "vendorAcceptOrder" };
   }
 };
 
-orderSchema.methods.selectDriver = async function (driver) {
-  console.log(driver);
-  try {
-    if (driver.status !== "ACTIVE") {
-      return {
-        error: "Selected driver is currently inactive.",
-      };
-    }
-    return await driver.addOrderToRoute(this._id);
-  } catch (error) {
-    return { error };
-  }
-};
 
 const OrderItem = mongoose.model("OrderItem", orderItemSchema);
 const Order = mongoose.model("Order", orderSchema);

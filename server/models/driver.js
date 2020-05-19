@@ -2,7 +2,9 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const Order = require("./order");
 const DeliveryRoute = require("./deliveryRoute");
-const { emailTransporter } = require("../services/communications");
+const Message = require("./message");
+const { sendPushNotification } = require("../services/communications");
+const { getAddressString } = require("../services/location");
 const OrderStatus = require("../constants/static-pages/order-status");
 const { ObjectId } = mongoose.Schema.Types;
 
@@ -28,6 +30,7 @@ const driverSchema = new mongoose.Schema({
   latitude: Number,
   longitude: Number,
   status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "INACTIVE" },
+  deviceTokens: [String],
 });
 
 driverSchema.methods.validatePassword = async function (password) {
@@ -36,53 +39,25 @@ driverSchema.methods.validatePassword = async function (password) {
 
 driverSchema.methods.getRoute = async function () {
   try {
-    const route = await DeliveryRoute.findById(this.route);
-    const populatedRoute = await route
+    let route = await DeliveryRoute.findById(this.route);
+    if (!route) {
+      route = await new DeliveryRoute({ driver: this._id }).save();
+      this.route = route._id;
+      await this.save();
+    }
+    await route
       .populate({
         path: "orders",
         populate: {
-          path: "address customer orderItems",
+          path: "address customer vendor orderItems",
           populate: { path: "menuItem", populate: "modifications" },
         },
       })
       .populate("vendor")
       .execPopulate();
-    return populatedRoute;
-  } catch (error) {
-    return { error, functionName: "getRoute" };
-  }
-};
-
-driverSchema.methods.addOrderToRoute = async function (orderId) {
-  try {
-    const order = await Order.findById(orderId);
-    const driverWithRoute = await this.populate({
-      path: "route",
-      populate: { path: "customer vendor", select: "-password" },
-    }).execPopulate();
-    let { route } = driverWithRoute;
-    if (!route) {
-      route = new DeliveryRoute({
-        orders: [orderId],
-        vendor: order.vendor,
-        driver: this._id,
-      });
-      this.route = route._id;
-    } else if (route.vendor._id.toString() !== order.vendor.toString()) {
-      return {
-        error: "Cannot add order from different vendor to route in progress.",
-        functionName: "addOrderToRoute",
-      };
-    } else {
-      route.orders.push(orderId);
-    }
-    order.driver = this._id;
-    await route.save();
-    await order.save();
-    await this.save();
     return route;
   } catch (error) {
-    return { error, functionName: "addOrderToRoute" };
+    return { error, functionName: "getRoute" };
   }
 };
 
@@ -97,6 +72,57 @@ driverSchema.methods.toggleStatus = async function (status) {
   this.status = status;
   const savedDriver = await this.save();
   return savedDriver.status;
+};
+
+driverSchema.methods.addDeviceToken = async function (deviceToken) {
+  this.deviceTokens.pull(deviceToken);
+  this.deviceTokens.push(deviceToken);
+  await this.save();
+  return this;
+};
+
+driverSchema.methods.requestDriver = async function (orderId) {
+  const order = await Order.findById(orderId);
+  await order.populate("vendor customer address").execPopulate();
+  const { vendor, customer } = order;
+  if (order.driver) {
+    return { error: "Order already has driver assigned." };
+  }
+  try {
+    const title = "Incoming Order!";
+    const body = "Will you accept?";
+    const data = {
+      orderId: orderId.toString(),
+      messageType: "REQUEST_DRIVER",
+      openModal: "true",
+      businessName: vendor.businessName,
+      customerName: `${customer.firstName} ${customer.lastName[0]}`,
+      businessAddress: getAddressString(vendor.address),
+      customerAddress: getAddressString(order.address),
+      tip: order.tip.toString(),
+    };
+    const { successCount, results, multicastId } = await sendPushNotification(
+      this.deviceTokens,
+      title,
+      body,
+      data
+    );
+    const message = new Message({
+      recipient: this._id,
+      recipientModel: "Driver",
+      sender: order.vendor._id,
+      senderModel: "Vendor",
+      title,
+      body,
+      successCount,
+      results,
+      multicastId,
+    });
+    const savedMessage = await message.save();
+    return savedMessage;
+  } catch (error) {
+    return { error };
+  }
 };
 
 module.exports = mongoose.model("Driver", driverSchema);

@@ -10,23 +10,31 @@ const Driver = require("../../server/models/driver");
 
 chai.use(chaiHttp);
 const { expect } = chai;
+let requester;
+const dbUrls = {
+  development: "mongodb://127.0.0.1:27017/delivery",
+  test: "mongodb://127.0.0.1:27017/delivery-test",
+  production:
+    "mongodb+srv://" +
+    process.env.DB_USER +
+    ":" +
+    process.env.DB_PASS +
+    "@cluster0-h73bz.mongodb.net/" +
+    process.env.DB_CLUSTER +
+    "?retryWrites=true&w=majority",
+};
 
 before(async () => {
-  await mongoose.connect(
-    "mongodb+srv://" +
-      process.env.DB_USER +
-      ":" +
-      process.env.DB_PASS +
-      "@cluster0-h73bz.mongodb.net/" +
-      process.env.DB_CLUSTER +
-      "?retryWrites=true&w=majority",
-    { useNewUrlParser: true, useUnifiedTopology: true }
-  );
+  requester = await chai.request(app).keepOpen();
+  await mongoose.connect(dbUrls[process.env.NODE_ENV], {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
   await mongoose.connection.db.dropDatabase();
 });
 
 after(() => {
-  mongoose.connection.close();
+  requester.close();
 });
 
 const models = {
@@ -52,12 +60,11 @@ const combineAddress = (userData) => {
   };
 };
 
-describe("Loads dummy users", function () {
-  it("Adds vendors", async function () {
+describe("Users", function () {
+  it("adds vendors", async function () {
     const requests = users.vendors.map(async (vendor) => {
       const address = combineAddress(vendor);
-      const response = await chai
-        .request(app)
+      const response = await requester
         .post("/vendors/register")
         .type("json")
         .send({ ...vendor, address });
@@ -69,11 +76,10 @@ describe("Loads dummy users", function () {
     });
     await Promise.all(requests);
   });
-  it("Adds customers", async function () {
+  it("adds customers", async function () {
     const requests = users.customers.map(async (customer) => {
       const address = combineAddress(customer);
-      const response = await chai
-        .request(app)
+      const response = await requester
         .post("/customers/register")
         .type("json")
         .send({ ...customer, address });
@@ -88,11 +94,10 @@ describe("Loads dummy users", function () {
     });
     await Promise.all(requests);
   });
-  it("Adds drivers", async function () {
+  it("adds drivers", async function () {
     const requests = users.drivers.map(async (driver) => {
       const address = combineAddress(driver);
-      const response = await chai
-        .request(app)
+      const response = await requester
         .post("/drivers/register")
         .type("json")
         .send({ ...driver, address });

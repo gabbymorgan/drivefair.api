@@ -31,18 +31,26 @@ deliveryRouteSchema.methods.rejectOrder = async function (orderId) {
 
 deliveryRouteSchema.methods.acceptOrder = async function (orderId) {
   try {
-    if (!this.orders.find((a) => a._id.toString() === orderId)) {
-      return { error: "Order does not belong to this driver." };
+    const order = await Order.findById(orderId);
+    if (
+      order.driver ||
+      order.disposition !== "ACCEPTED_BY_VENDOR" ||
+      order.method !== "DELIVERY"
+    ) {
+      return { error: "Order not available.", functionName: "acceptOrder" };
     }
-    const foundOrder = await Order.findById(orderId);
-    foundOrder.disposition = "ACCEPTED_BY_DRIVER";
-    foundOrder.driver = this.vendor;
-    await foundOrder.save();
-    const savedRoute = await this.save();
-    await savedRoute
-      .populate({ path: "customer vendor address", select: "-password" })
-      .execPopulate();
-    return savedRoute;
+    this.vendor = order.vendor._id;
+    order.disposition = "ACCEPTED_BY_DRIVER";
+    order.driver = this.vendor;
+    this.orders.pull(orderId);
+    this.orders.push(orderId);
+    await order.save();
+    await this.save();
+    await this.populate({
+      path: "customer vendor address",
+      select: "-password",
+    }).execPopulate();
+    return this;
   } catch (error) {
     return { error, functionName: "acceptOrder" };
   }
