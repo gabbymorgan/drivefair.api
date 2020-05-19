@@ -127,7 +127,7 @@ router
   })
   .post("/addAddress", async (req, res) => {
     try {
-      const addresses = await req.user.addAddress(req.body);
+      const addresses = await req.user.addAddress(req.body.address);
       if (addresses.error) {
         const { error, functionName } = addresses;
         logError(error, req, functionName);
