@@ -4,6 +4,7 @@ const Order = require("./order");
 const DeliveryRoute = require("./deliveryRoute");
 const Message = require("./message");
 const { sendPushNotification } = require("../services/communications");
+const { getAddressString } = require("../services/location");
 const OrderStatus = require("../constants/static-pages/order-status");
 const { ObjectId } = mongoose.Schema.Types;
 
@@ -76,13 +77,14 @@ driverSchema.methods.toggleStatus = async function (status) {
 driverSchema.methods.addDeviceToken = async function (deviceToken) {
   this.deviceTokens.pull(deviceToken);
   this.deviceTokens.push(deviceToken);
-  const savedDriver = await this.save();
-  return savedDriver.deviceTokens;
+  await this.save();
+  return this;
 };
 
 driverSchema.methods.requestDriver = async function (orderId) {
   const order = await Order.findById(orderId);
-  await order.populate("vendor").execPopulate();
+  await order.populate("vendor customer address").execPopulate();
+  const { vendor, customer } = order;
   if (order.driver) {
     return { error: "Order already has driver assigned." };
   }
@@ -93,6 +95,11 @@ driverSchema.methods.requestDriver = async function (orderId) {
       orderId: orderId.toString(),
       messageType: "REQUEST_DRIVER",
       openModal: "true",
+      businessName: vendor.businessName,
+      customerName: `${customer.firstName} ${customer.lastName[0]}`,
+      businessAddress: getAddressString(vendor.address),
+      customerAddress: getAddressString(order.address),
+      tip: order.tip.toString(),
     };
     const { successCount, results, multicastId } = await sendPushNotification(
       this.deviceTokens,

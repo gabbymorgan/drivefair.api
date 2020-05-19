@@ -89,7 +89,6 @@ orderSchema.methods.vendorAcceptOrder = async function ({
     }
     if (this.method === "DELIVERY") {
       const driverRequest = await selectedDriver.requestDriver(this._id);
-      console.log({driverRequest})
       if (driverRequest.error) {
         return { error: driverRequest.error, functionName: "requestDriver" };
       }
