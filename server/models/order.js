@@ -66,8 +66,11 @@ orderSchema.methods.addOrderItem = async function (menuItemId, modifications) {
   await newOrderItem.save();
   this.orderItems.push(newOrderItem._id);
   this.subtotal += newOrderItem.price;
-  const updatedOrder = await this.save();
-  return updatedOrder;
+  await this.save();
+  return await this.populate({
+    path: "orderItems",
+    populate: { path: "menuItem" },
+  }).execPopulate();
 };
 
 orderSchema.methods.removeOrderItem = async function (itemId) {
@@ -75,7 +78,11 @@ orderSchema.methods.removeOrderItem = async function (itemId) {
   await this.orderItems.pull(itemId);
   this.subtotal -= orderItem.price;
   await orderItem.remove();
-  return await this.save();
+  await this.save();
+  return await this.populate({
+    path: "orderItems",
+    populate: { path: "menuItem" },
+  }).execPopulate();
 };
 
 orderSchema.methods.vendorAcceptOrder = async function ({
@@ -109,7 +116,6 @@ orderSchema.methods.vendorAcceptOrder = async function ({
     return { error, functionName: "vendorAcceptOrder" };
   }
 };
-
 
 const OrderItem = mongoose.model("OrderItem", orderItemSchema);
 const Order = mongoose.model("Order", orderSchema);
