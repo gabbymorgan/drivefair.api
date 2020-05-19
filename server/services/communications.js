@@ -13,12 +13,12 @@ const emailTransporter = nodemailer.createTransport({
   },
 
   tls: {
-    ciphers: process.env.EMAIL_CIPHERS.split(","),
+    ciphers: process.env.EMAIL_CIPHERS,
   },
 });
 
 emailTransporter.sendMail =
-  process.env.NODE_ENV === "PRODUCTION"
+  process.env.NODE_ENV === "production"
     ? emailTransporter.sendMail
     : async () => true;
 
