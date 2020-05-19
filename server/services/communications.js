@@ -18,7 +18,7 @@ const emailTransporter = nodemailer.createTransport({
 });
 
 emailTransporter.sendMail =
-  process.env.NODE_ENV === "PRODUCTION"
+  process.env.NODE_ENV === "production"
     ? emailTransporter.sendMail
     : async () => true;
 
