@@ -49,16 +49,21 @@ customerSchema.methods.createCart = async function (vendorId) {
   }
 };
 
-customerSchema.methods.getCart = async function () {
+customerSchema.methods.getCart = async function (unpopulated) {
   try {
-    const customerWithcart = await this.populate({
-      path: "cart",
-      populate: {
-        path: "orderItems",
-        populate: { path: "menuItem" },
-      },
-    }).execPopulate();
-    return customerWithcart.cart;
+    let cart = await Order.findById(this.cart);
+    if (!cart) {
+      cart = new Order({ customer: this._id });
+    }
+    if (!unpopulated) {
+      await cart
+        .populate({
+          path: "orderItems",
+          populate: { path: "menuItem" },
+        })
+        .execPopulate();
+    }
+    return cart;
   } catch (error) {
     return { error, functionName: "getCart" };
   }

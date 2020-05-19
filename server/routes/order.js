@@ -9,15 +9,10 @@ router
   .post("/addToCart", async (req, res) => {
     try {
       const customer = req.user;
-      let cart = await customer.getCart();
       const { menuItemId, modifications, vendorId } = req.body;
-      if (!cart || !cart.vendor || vendorId != cart.vendor._id) {
+      let cart = await customer.getCart(true);
+      if (!cart || !cart.vendor || cart.vendor.toString() !== vendorId)
         cart = await customer.createCart(vendorId);
-        if (cart.error) {
-          logError(cart.error, req, cart.functionName);
-          return res.status(500).json({ error: createCart.error });
-        }
-      }
       const savedCart = await cart.addOrderItem(menuItemId, modifications);
       res.status(200).json({ savedCart });
     } catch (error) {
@@ -27,7 +22,7 @@ router
   })
   .post("/removeFromCart", async (req, res) => {
     try {
-      const cart = await req.user.getCart();
+      const cart = await req.user.getCart(true);
       const { orderItemId } = req.body;
       const savedCart = await cart.removeOrderItem(orderItemId);
       if (savedCart.error) {
