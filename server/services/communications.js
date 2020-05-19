@@ -13,7 +13,7 @@ const emailTransporter = nodemailer.createTransport({
   },
 
   tls: {
-    ciphers: process.env.EMAIL_CIPHERS.split(","),
+    ciphers: process.env.EMAIL_CIPHERS,
   },
 });
 
