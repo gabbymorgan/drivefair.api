@@ -144,7 +144,10 @@ router
   })
   .get("/active", async (req, res) => {
     try {
-      const drivers = await Driver.find({ status: "ACTIVE" });
+      const drivers = await Driver.find({
+        status: "ACTIVE",
+        route: null,
+      });
       res.status(200).json({ drivers });
     } catch (error) {
       return await logError(error, req, res);
