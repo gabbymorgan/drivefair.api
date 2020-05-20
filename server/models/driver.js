@@ -11,13 +11,17 @@ const { ObjectId } = mongoose.Schema.Types;
 const driverSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: true,
+    required: [true, "Email is required."],
     unique: true,
     index: true,
     maxlength: 64,
   },
   emailIsConfirmed: { type: Boolean, default: false },
-  password: { type: String, required: true, maxlength: 128 },
+  password: {
+    type: String,
+    required: [true, "password is required."],
+    maxlength: 128,
+  },
   firstName: { type: String, maxlength: 64 },
   lastName: { type: String, maxlength: 64 },
   phoneNumber: { type: String },
@@ -86,7 +90,7 @@ driverSchema.methods.requestDriver = async function (orderId) {
   await order.populate("vendor customer address").execPopulate();
   const { vendor, customer } = order;
   if (order.driver) {
-    return { error: "Order already has driver assigned." };
+    return { error: { errorMessage: "Order already has driver assigned." } };
   }
   try {
     const title = "Incoming Order!";

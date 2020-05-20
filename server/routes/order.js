@@ -16,8 +16,7 @@ router
       const savedCart = await cart.addOrderItem(menuItemId, modifications);
       res.status(200).json({ savedCart });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/removeFromCart", async (req, res) => {
@@ -26,13 +25,11 @@ router
       const { orderItemId } = req.body;
       const savedCart = await cart.removeOrderItem(orderItemId);
       if (savedCart.error) {
-        logError(savedCart.error, req, savedCart.functionName);
-        return res.status(500).json({ error: savedCart.error });
+        return await logError(savedCart.error, req, res);
       }
       res.status(200).json({ savedCart });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/setTip", async (req, res) => {
@@ -42,7 +39,7 @@ router
       const savedCart = await cart.save();
       res.status(200).json({ savedCart });
     } catch (error) {
-      logError(error, req);
+      return await logError(error, req, res);
     }
   })
   .post("/pay", async (req, res) => {
@@ -51,26 +48,22 @@ router
         req.body.paymentDetails.token.id
       );
       if (chargedOrder.error) {
-        logError(chargedOrder.error, req, chargedOrder.functionName);
-        return res.status(500).json({ error: chargedOrder.error });
+        return await logError(chargedOrder.error, req, res);
       }
       res.status(200).json({ chargedOrder });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/cart", async (req, res) => {
     try {
       const savedCart = await req.user.getCart();
       if (savedCart.error) {
-        logError(savedCart.error, req, savedCart.functionName);
-        return res.status(500).json({});
+        return await logError(savedCart.error, req, res);
       }
       res.status(200).json({ savedCart });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/customerSetOrderMethod", async (req, res) => {
@@ -80,8 +73,7 @@ router
       const savedCart = await customerCart.save();
       res.status(200).json({ savedCart });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/active", async (req, res) => {
@@ -98,8 +90,7 @@ router
         .execPopulate();
       res.status(200).json({ activeOrders: userWithOrders.activeOrders });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/ready", async (req, res) => {
@@ -116,8 +107,7 @@ router
         .execPopulate();
       res.status(200).json({ readyOrders: userWithOrders.readyOrders });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/history", async (req, res) => {
@@ -134,8 +124,7 @@ router
         .execPopulate();
       res.status(200).json({ orderHistory: userWithOrders.orderHistory });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/vendorAcceptOrder", async (req, res) => {
@@ -143,7 +132,11 @@ router
       const { orderId, selectedDriverId, timeToReady } = req.body;
       const vendor = req.user;
       if (!vendor.activeOrders.includes(orderId)) {
-        return res.status(401).json({ error: { message: "Unauthorized" } });
+        return await logError(
+          { message: "Order not found.", status: 404 },
+          req,
+          res
+        );
       }
       const order = await Order.findById(orderId);
       const selectedDriver = await Driver.findById(selectedDriverId);
@@ -153,16 +146,14 @@ router
         timeToReady,
       });
       if (acceptOrderResponse.error) {
-        const { error, functionName } = acceptOrderResponse;
-        logError(error, req, functionName);
-        return res.status(500).json({ error });
+        const { error } = acceptOrderResponse;
+        return await logError(error, req, res);
       }
       res.status(200).json({
         activeOrders: acceptOrderResponse.activeOrders,
       });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/requestDriver", async (req, res) => {
@@ -170,13 +161,16 @@ router
       const { orderId, selectedDriverId } = req.body;
       const vendor = req.user;
       if (!vendor.activeOrders.includes(orderId)) {
-        return res.status(401).json({ error: { message: "Unauthorized" } });
+        return await logError(
+          { message: "Order not found.", status: 404 },
+          req,
+          res
+        );
       }
       const selectedDriver = await Driver.findById(selectedDriverId);
       const updatedOrder = await selectedDriver.requestDriver(orderId);
       if (updatedOrder.error) {
-        logError(updatedOrder.error, req, updatedOrder.functionName);
-        return res.status(500).json({ error: updatedOrder.error });
+        return await logError(updatedOrder.error, req, res);
       }
       const { activeOrders } = await vendor
         .populate({
@@ -192,8 +186,7 @@ router
         activeOrders,
       });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/readyOrder", async (req, res) => {
@@ -201,17 +194,15 @@ router
       const { orderId } = req.body;
       const updatedVendor = await req.user.readyOrder(orderId);
       if (updatedVendor.error) {
-        const { error, functionName } = updatedVendor;
-        logError(error, req, functionName);
-        return res.status(500).json({ error });
+        const { error } = updatedVendor;
+        return await logError(error, req, res);
       }
       res.status(200).json({
         activeOrders: updatedVendor.activeOrders,
         readyOrders: updatedVendor.readyOrders,
       });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/deliverOrder", async (req, res) => {
@@ -219,17 +210,15 @@ router
       const { orderId } = req.body;
       const updatedVendor = await req.user.deliverOrder(orderId);
       if (updatedVendor.error) {
-        const { error, functionName } = updatedVendor;
-        logError(error, req, functionName);
-        return res.status(500).json({ error });
+        const { error } = updatedVendor;
+        return await logError(error, req, res);
       }
       res.status(200).json({
         orderHistory: updatedVendor.orderHistory,
         readyOrders: updatedVendor.readyOrders,
       });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/customerPickUpOrder", async (req, res) => {
@@ -237,17 +226,15 @@ router
       const { orderId } = req.body;
       const updatedCustomer = await req.user.customerPickUpOrder(orderId);
       if (updatedCustomer.error) {
-        const { error, functionName } = updatedCustomer;
-        logError(error, req, functionName);
-        return res.status(500).json({ error });
+        const { error } = updatedCustomer;
+        return await logError(error, req, res);
       }
       res.status(200).json({
         orderHistory: updatedCustomer.orderHistory,
         readyOrders: updatedCustomer.readyOrders,
       });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/refundOrder", async (req, res) => {
@@ -256,13 +243,16 @@ router
       const vendor = req.user;
       const passwordIsValid = await vendor.validatePassword(password);
       if (!passwordIsValid) {
-        return res.status(401).json({ error: { message: "Unauthorized" } });
+        return await logError(
+          { message: "Order not found.", status: 404 },
+          req,
+          res
+        );
       }
       const updatedVendor = await vendor.refundOrder(orderId);
       if (updatedVendor.error) {
-        const { error, functionName } = updatedVendor;
-        logError(error, req, functionName);
-        return res.status(500).json({ error });
+        const { error } = updatedVendor;
+        return await logError(error, req, res);
       }
       res.status(200).json({
         activeOrders: updatedVendor.activeOrders,
@@ -270,8 +260,7 @@ router
         orderHistory: updatedVendor.orderHistory,
       });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/arriveForPickup", async (req, res) => {

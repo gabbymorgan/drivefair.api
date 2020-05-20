@@ -1,7 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const Driver = require("../models/driver");
-const Message = require("../models/message");
 const {
   emailTransporter,
   sendPushNotification,
@@ -45,8 +44,7 @@ router
         ),
       });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).send({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/login", async (req, res) => {
@@ -56,45 +54,42 @@ router
       if (!foundDriver) {
         return res
           .status(401)
-          .json({ message: "Incorrect username and/or password." });
+          .json({ errorMessage: "Incorrect username and/or password." });
       }
       const passwordIsValid = foundDriver.validatePassword(password);
       if (!passwordIsValid) {
         return res
           .status(401)
-          .json({ message: "Incorrect username and/or password." });
+          .json({ errorMessage: "Incorrect username and/or password." });
       }
       const token = await signToken(foundDriver, "Driver");
       res.status(200).json({ token, profile: foundDriver, userType: "driver" });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).send({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/confirmEmail", async (req, res) => {
     try {
       const isEmailToken = await validateEmailToken(req.query.token);
       if (!req.user || !isEmailToken) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return res.status(401).json({ errorMessage: "Unauthorized" });
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/me", async (req, res) => {
     try {
       const profile = req.user;
       if (!profile) {
-        return res.status(401).json({ message: "Unauthorized." });
+        return res.status(401).json({ errorMessage: "Unauthorized." });
       }
       res.status(200).json({ profile });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/sendConfirmationEmail", async (req, res) => {
@@ -113,8 +108,7 @@ router
       });
       res.status(200).json({ success: true });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/addDriver", async (req, res) => {
@@ -122,8 +116,7 @@ router
       const drivers = await req.user.addDriver(req.body.driverId);
       res.status(200).json({ drivers });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/removeDriver", async (req, res) => {
@@ -131,8 +124,7 @@ router
       const drivers = await req.user.removeDriver(req.body.driverId);
       res.status(200).json({ drivers });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/rostered", async (req, res) => {
@@ -140,8 +132,7 @@ router
       const drivers = await req.user.populate("drivers").execPopulate();
       res.status(200).json({ drivers });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/active", async (req, res) => {
@@ -149,8 +140,7 @@ router
       const drivers = await Driver.find({ status: "ACTIVE" });
       res.status(200).json({ drivers });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/all", async (req, res) => {
@@ -158,21 +148,18 @@ router
       const drivers = await Driver.find();
       res.status(200).json({ drivers });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/toggleStatus", async (req, res) => {
     try {
       const status = await req.user.toggleStatus(req.body.status);
       if (status.error) {
-        logError(status.error, req, status.functionName);
-        return res.status(500).json({ error: status.error });
+        return await logError(status.error, req, res);
       }
       res.status(200).json({ status });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/setLocation", async (req, res) => {
@@ -184,8 +171,7 @@ router
       const savedDriver = await driver.save();
       res.status(200).json({ savedDriver });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/addDeviceToken", async (req, res) => {
@@ -195,13 +181,12 @@ router
       const addDeviceTokenResponse = await driver.addDeviceToken(deviceToken);
       if (addDeviceTokenResponse.error) {
         const { error, functionName } = addDeviceTokenResponse;
-        logError(error, req, functionName);
-        return res.status(500).json({ error });
+        return await logError(error, req, functionName);
+        return;
       }
       res.status(200).json({ success: true });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/requestDriver", async (req, res) => {
@@ -209,7 +194,9 @@ router
       const { driverId, orderId } = req.body;
       const { user, userModel } = req;
       if (userModel !== "Vendor") {
-        return res.status(401).json({ error: "Unauthorized." });
+        return res
+          .status(401)
+          .json({ error: { errorMessage: "Unauthorized." } });
       }
       const driver = await Driver.findById(driverId);
       const requestDriverResponse = await driver.requestDriver(
@@ -218,13 +205,12 @@ router
       );
       if (requestDriverResponse.error) {
         const { error, functionName } = requestDriverResponse;
-        logError(error, req, functionName);
-        return res.status(500).json({ error });
+        return await logError(error, req, functionName);
+        return;
       }
       res.status(200).json(requestDriverResponse);
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   });
 

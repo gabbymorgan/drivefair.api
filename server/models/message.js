@@ -4,19 +4,27 @@ const { ObjectId } = mongoose.Schema.Types;
 const messageSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: true,
+    required: [true, "Message title is required"],
   },
-  body: { type: String, required: true },
-  sender: { type: ObjectId, refPath: "senderModel", required: true },
+  body: { type: String, required: [true, "Message body is required"] },
+  sender: {
+    type: ObjectId,
+    refPath: "senderModel",
+    required: [true, "Sender is required"],
+  },
   senderModel: {
     type: String,
-    required: true,
+    required: [true, "Sender type is required"],
     enum: ["Vendor", "Customer", "Driver"],
   },
-  recipient: { type: ObjectId, refPath: "recipientModel", required: true },
+  recipient: {
+    type: ObjectId,
+    refPath: "recipientModel",
+    required: [true, "Recipient is required"],
+  },
   recipientModel: {
     type: String,
-    required: true,
+    required: [true, "Recipient type is required"],
     enum: ["Vendor", "Customer", "Driver"],
   },
   results: [Object],

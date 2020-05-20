@@ -51,8 +51,7 @@ router
         ),
       });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).send({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/login", async (req, res) => {
@@ -60,49 +59,61 @@ router
       const { email, password } = req.body;
       const foundCustomer = await Customer.findOne({ email });
       if (!foundCustomer) {
-        return res
-          .status(401)
-          .json({ message: "Incorrect username and/or password." });
+        return await logError(
+          {
+            message: "Wrong email/password combination.",
+            status: 401,
+          },
+          req,
+          res
+        );
       }
       const passwordIsValid = foundCustomer.validatePassword(password);
       if (!passwordIsValid) {
-        return res
-          .status(401)
-          .json({ message: "Incorrect username and/or password." });
+        return await logError(
+          {
+            message: "Wrong email/password combination.",
+            status: 401,
+          },
+          req,
+          res
+        );
       }
       const token = await signToken(foundCustomer, "Customer");
       res
         .status(200)
         .json({ token, profile: foundCustomer, userType: "customer" });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).send({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/confirmEmail", async (req, res) => {
     try {
       const isEmailToken = await validateEmailToken(req.query.token);
       if (!req.user || !isEmailToken) {
-        return res.status(401).json({ message: "Unauthorized" });
+        logError({ message: "Unauthorized", status: 401 });
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .get("/me", async (req, res) => {
     try {
       const profile = req.user;
       if (!profile) {
-        return res.status(401).json({ message: "Unauthorized." });
+        return await logError(
+          { message: "Unauthorized", status: 401 },
+          null,
+          req,
+          res
+        );
       }
       res.status(200).json({ profile });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/sendConfirmationEmail", async (req, res) => {
@@ -121,22 +132,19 @@ router
       });
       res.status(200).json({ success: true });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/addAddress", async (req, res) => {
     try {
       const addresses = await req.user.addAddress(req.body.address);
       if (addresses.error) {
-        const { error, functionName } = addresses;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        const { error } = addresses;
+        return await logError(error, req, res);
       }
       res.status(200).json({ addresses });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/editAddress", async (req, res) => {
@@ -144,14 +152,12 @@ router
       const { addressId, changes } = req.body;
       const addresses = await req.user.editAddress(addressId, changes);
       if (addresses.error) {
-        const { error, functionName } = addresses;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        const { error } = addresses;
+        return await logError(error, req, res);
       }
       res.status(200).json({ addresses });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/selectAddress", async (req, res) => {
@@ -159,14 +165,12 @@ router
       const { addressId } = req.body;
       const selectedAddress = await req.user.selectAddress(addressId);
       if (selectedAddress.error) {
-        const { error, functionName } = selectedAddress;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        const { error } = selectedAddress;
+        return await logError(error, req, res);
       }
       res.status(200).json({ selectedAddress });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req);
     }
   })
   .post("/deleteAddress", async (req, res) => {
@@ -174,14 +178,12 @@ router
       const { addressId } = req.body;
       const addresses = await req.user.deleteAddress(addressId);
       if (addresses.error) {
-        const { error, functionName } = addresses;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        const { error } = addresses;
+        return await logError(error, req, res);
       }
       res.status(200).json({ addresses });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req);
     }
   })
   .get("/addresses", async (req, res) => {
@@ -189,8 +191,7 @@ router
       const { addresses } = await req.user.populate("addresses").execPopulate();
       res.status(200).json({ addresses });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req);
     }
   });
 

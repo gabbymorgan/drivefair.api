@@ -2,11 +2,11 @@ const mongoose = require("mongoose");
 const axios = require("axios");
 
 const addressSchema = new mongoose.Schema({
-  city: { type: String, required: true },
-  state: { type: String, required: true },
-  street: { type: String, required: true },
+  city: { type: String, required: [true, "City is required."] },
+  state: { type: String, required: [true, "State is required."] },
+  street: { type: String, required: [true, "Street is required."] },
   unit: Number,
-  zip: { type: Number, required: true },
+  zip: { type: Number, required: [true, "Zip is required."] },
   latitude: Number,
   longitude: Number,
   note: { type: String },

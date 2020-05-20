@@ -13,7 +13,9 @@ const deliveryRouteSchema = new mongoose.Schema({
 deliveryRouteSchema.methods.rejectOrder = async function (orderId) {
   try {
     if (!this.orders.find((a) => a._id.toString() === orderId)) {
-      return { error: "Order does not belong to this driver." };
+      return {
+        error: { errorMessage: "Order does not belong to this driver." },
+      };
     }
     this.orders.pull({ _id: orderId });
     const foundOrder = await Order.findById(orderId);
@@ -25,7 +27,7 @@ deliveryRouteSchema.methods.rejectOrder = async function (orderId) {
       .execPopulate();
     return savedRoute;
   } catch (error) {
-    return { error, functionName: "rejectOrder" };
+    return { error: { ...error, functionName: "rejectOrder" } };
   }
 };
 
@@ -37,7 +39,10 @@ deliveryRouteSchema.methods.acceptOrder = async function (orderId) {
       order.disposition !== "ACCEPTED_BY_VENDOR" ||
       order.method !== "DELIVERY"
     ) {
-      return { error: "Order not available.", functionName: "acceptOrder" };
+      return {
+        error: { errorMessage: "Order not available." },
+        functionName: "acceptOrder",
+      };
     }
     this.vendor = order.vendor._id;
     order.disposition = "ACCEPTED_BY_DRIVER";
@@ -59,7 +64,9 @@ deliveryRouteSchema.methods.acceptOrder = async function (orderId) {
 deliveryRouteSchema.methods.pickUpOrder = async function (orderId) {
   try {
     if (!this.orders.find((a) => a._id.toString() === orderId)) {
-      return { error: "Order does not belong to this driver." };
+      return {
+        error: { errorMessage: "Order does not belong to this driver." },
+      };
     }
     const foundOrder = await Order.findById(orderId);
     if (foundOrder.disposition !== "READY") {
