@@ -60,7 +60,9 @@ describe("Driver Request", function () {
       });
     expect(response, "Response is status 200").to.have.status(200);
     expect(response.body, "Response has no error").to.not.have.key("error");
-    expect(response.body.drivers, "Response has no error").to.have.lengthOf(1);
+    expect(response.body.drivers, "Response has one driver").to.have.lengthOf(
+      1
+    );
   });
   it("vendor accepts order/requests driver", async function () {
     const response = await chai

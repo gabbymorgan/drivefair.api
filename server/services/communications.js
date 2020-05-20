@@ -17,12 +17,19 @@ const emailTransporter = nodemailer.createTransport({
   },
 });
 
-emailTransporter.sendMail =
-  process.env.NODE_ENV === "production"
-    ? emailTransporter.sendMail
-    : async () => true;
+const sendMail = async ({ to, subject, text, html }) => {
+  return process.env.NODE_ENV === "production"
+    ? await emailTransporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to,
+        subject,
+        text,
+        html,
+      })
+    : true;
+};
 
-const sendPushNotification = async (deviceTokens, title, body, data) => {
+const sendPushNotification = async ({ deviceTokens, title, body, data }) => {
   const message = await admin.messaging().sendToDevice(
     deviceTokens,
     {
@@ -40,6 +47,6 @@ const sendPushNotification = async (deviceTokens, title, body, data) => {
 };
 
 module.exports = {
-  emailTransporter,
+  sendMail,
   sendPushNotification,
 };

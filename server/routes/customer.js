@@ -1,7 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const Customer = require("../models/customer");
-const { emailTransporter } = require("../services/communications");
+const Communications = require("../services/communications");
 const logError = require("../services/errorLog");
 const {
   signToken,
@@ -37,12 +37,7 @@ router
         savedCustomer,
         "Customer"
       );
-      res
-        .status(200)
-        .json({ token, profile: savedCustomer, userType: "customer" });
-      await emailTransporter.sendMail({
-        to: email,
-        from: process.env.EMAIL_USER,
+      await savedCustomer.sendEmail({
         subject: `Thanks for signing up, ${firstName}!`,
         html: emailConfirmation.request(
           "customers",
@@ -50,6 +45,9 @@ router
           emailConfirmationToken
         ),
       });
+      res
+        .status(200)
+        .json({ token, profile: savedCustomer, userType: "customer" });
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -120,7 +118,7 @@ router
     try {
       const customer = req.user;
       const emailConfirmationToken = await signEmailToken(customer, "Customer");
-      await emailTransporter.sendMail({
+      await customer.sendEmail({
         to: customer.email,
         from: process.env.EMAIL_USER,
         subject: `Thanks for signing up, ${customer.firstName}!`,

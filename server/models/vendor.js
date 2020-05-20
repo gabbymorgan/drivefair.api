@@ -6,6 +6,7 @@ const Modification = require("./modification");
 const MenuItem = require("./menuItem");
 const Driver = require("./driver");
 const Payment = require("../services/payment");
+const Communications = require("../services/communications");
 const { ObjectId } = mongoose.Schema.Types;
 
 const vendorSchema = new mongoose.Schema({
@@ -56,10 +57,64 @@ const vendorSchema = new mongoose.Schema({
   readyOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
   drivers: [{ type: ObjectId, ref: "Driver" }],
+  deviceTokens: [String],
+  emailSettings: { type: Object, default: {} },
+  notificationSettings: { type: Object, default: {} },
 });
 
 vendorSchema.methods.validatePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
+};
+
+vendorSchema.methods.sendEmail = async function ({
+  setting,
+  subject,
+  text,
+  html,
+}) {
+  if (!setting || this.emailSettings[setting]) {
+    return await Communications.sendMail({
+      to: this.email,
+      subject,
+      text,
+      html,
+    });
+  }
+  return {
+    error: {
+      message: `Driver has turned off email setting: ${setting}`,
+      status: 401,
+    },
+  };
+};
+
+vendorSchema.methods.sendPushNotification = async function ({
+  setting,
+  title,
+  body,
+  data,
+  senderId,
+  senderModel,
+}) {
+  if (!setting || this.notificationSettings[setting]) {
+    const message = new Message({
+      recipient: this._id,
+      recipientModel: "Vendor",
+      sender: senderId,
+      senderModel,
+      title,
+      body,
+      data,
+      deviceTokens: this.deviceTokens,
+    });
+    return await message.save();
+  }
+  return {
+    error: {
+      message: `Driver has turned off notification setting: ${setting}`,
+      status: 401,
+    },
+  };
 };
 
 vendorSchema.methods.editVendor = async function (changes) {
@@ -267,7 +322,7 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     const order = await Order.findById(orderId);
     const customer = await Customer.findById(order.customer);
     if (order.vendor.toString() !== this._id.toString()) {
-      return { error: { errorMessage: "Unauthorized" } };
+      return { error: { message: "Unauthorized" } };
     }
     const charge = await Payment.refundCharge(order.chargeId);
     if (charge.error) {
@@ -283,15 +338,13 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     await customer.save();
     await this.save();
     const refundedOrder = await order.save();
-    await emailTransporter.sendMail({
+    await Communications.sendmail({
       to: this.email,
-      from: process.env.EMAIL_USER,
       subject: `Your order for ${vendor.businessName}.`,
       html: "Refunded",
     });
-    await emailTransporter.sendMail({
+    await Communications.sendmail({
       to: vendor.email,
-      from: process.env.EMAIL_USER,
       subject: `Order refunded!`,
       html: "Refunded",
     });
@@ -306,7 +359,7 @@ vendorSchema.methods.addDriver = async function (driverId) {
     const driver = await new Driver.findById(driverId);
     if (!driver) {
       return {
-        error: { errorMessage: "No driver by that Id;" },
+        error: { message: "No driver by that Id;" },
         functionName: "addDriver",
       };
     }

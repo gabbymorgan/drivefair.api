@@ -14,7 +14,7 @@ deliveryRouteSchema.methods.rejectOrder = async function (orderId) {
   try {
     if (!this.orders.find((a) => a._id.toString() === orderId)) {
       return {
-        error: { errorMessage: "Order does not belong to this driver." },
+        error: { message: "Order does not belong to this driver." },
       };
     }
     this.orders.pull({ _id: orderId });
@@ -40,7 +40,7 @@ deliveryRouteSchema.methods.acceptOrder = async function (orderId) {
       order.method !== "DELIVERY"
     ) {
       return {
-        error: { errorMessage: "Order not available." },
+        error: { message: "Order not available." },
         functionName: "acceptOrder",
       };
     }
@@ -65,7 +65,7 @@ deliveryRouteSchema.methods.pickUpOrder = async function (orderId) {
   try {
     if (!this.orders.find((a) => a._id.toString() === orderId)) {
       return {
-        error: { errorMessage: "Order does not belong to this driver." },
+        error: { message: "Order does not belong to this driver." },
       };
     }
     const foundOrder = await Order.findById(orderId);
@@ -114,6 +114,10 @@ deliveryRouteSchema.methods.deliverOrder = async function (orderId, driver) {
     await savedRoute
       .populate({ path: "customer vendor address", select: "-password" })
       .execPopulate();
+    await customer.sendEmail({
+      subject: "Your order has arrived!",
+      text: "Go and get it!",
+    });
     return savedRoute;
   } catch (error) {
     return { error, functionName: "deliverOrder" };

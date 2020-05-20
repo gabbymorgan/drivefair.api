@@ -1,7 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const Vendor = require("../models/vendor");
-const { emailTransporter } = require("../services/communications");
+const Communications = require("../services/communications");
 const {
   signToken,
   signEmailToken,
@@ -39,10 +39,7 @@ router
         savedVendor,
         "Vendor"
       );
-      res.status(200).json({ profile: savedVendor, token });
-      await emailTransporter.sendMail({
-        to: email,
-        from: process.env.EMAIL_USER,
+      await savedVendor.sendEmail({
         subject: `Thanks for signing up, ${businessName}!`,
         html: emailConfirmation.request(
           "vendors",
@@ -50,6 +47,7 @@ router
           emailConfirmationToken
         ),
       });
+      res.status(200).json({ profile: savedVendor, token });
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -292,7 +290,7 @@ router
     try {
       const vendor = req.user;
       const emailConfirmationToken = await signEmailToken(vendor, "Vendor");
-      await emailTransporter.sendMail({
+      await Communications.sendmail({
         to: vendor.email,
         from: process.env.EMAIL_USER,
         subject: `Thanks for signing up, ${vendor.businessName}!`,

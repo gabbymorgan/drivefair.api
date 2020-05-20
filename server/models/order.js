@@ -97,7 +97,7 @@ orderSchema.methods.vendorAcceptOrder = async function ({
   try {
     if (this.vendor.toString() !== vendor._id.toString()) {
       return {
-        error: { errorMessage: "Unauthorized" },
+        error: { message: "Unauthorized" },
         functionName: "vendorAcceptOrder",
       };
     }
