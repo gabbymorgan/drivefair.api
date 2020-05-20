@@ -4,8 +4,12 @@ const { ObjectId } = mongoose.Schema.Types;
 const MenuItem = require("./menuItem");
 
 const orderItemSchema = new mongoose.Schema({
-  menuItem: { type: ObjectId, ref: "MenuItem", required: true },
-  price: { type: Number, required: true },
+  menuItem: {
+    type: ObjectId,
+    ref: "MenuItem",
+    required: [true, "MenuItem ID is required."],
+  },
+  price: { type: Number, required: [true, "Order item price is required."] },
   modifications: Object,
 });
 
@@ -92,7 +96,10 @@ orderSchema.methods.vendorAcceptOrder = async function ({
 }) {
   try {
     if (this.vendor.toString() !== vendor._id.toString()) {
-      return { error: "Unauthorized", functionName: "vendorAcceptOrder" };
+      return {
+        error: { errorMessage: "Unauthorized" },
+        functionName: "vendorAcceptOrder",
+      };
     }
     if (this.method === "DELIVERY") {
       const driverRequest = await selectedDriver.requestDriver(this._id);

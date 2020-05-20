@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 
 const settingSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  value: { type: Object, required: true },
+  name: { type: String, required: [true, "Setting name is required."] },
+  value: { type: Object, required: [true, "Setting value is required."] },
   prevName: String,
   prevValue: Object,
   createdOn: { type: Date, default: Date.now },
-  createdBy: { type: String, required: true },
+  createdBy: { type: String, required: [true, "Unauthorized."] },
   modifiedOn: Date,
   modifiedBy: String,
 });

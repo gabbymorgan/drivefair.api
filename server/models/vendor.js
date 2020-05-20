@@ -11,13 +11,17 @@ const { ObjectId } = mongoose.Schema.Types;
 const vendorSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: true,
+    required: [true, "Email is required"],
     unique: true,
     index: true,
     maxlength: 64,
   },
   emailIsConfirmed: { type: Boolean, default: false },
-  password: { type: String, required: true, maxlength: 128 },
+  password: {
+    type: String,
+    required: [true, "Password is required"],
+    maxlength: 128,
+  },
   phoneNumber: { type: String },
   address: {
     city: String,
@@ -29,14 +33,19 @@ const vendorSchema = new mongoose.Schema({
     longitude: Number,
     note: String,
   },
-  businessName: { type: String, required: true, unique: true, maxlength: 128 },
+  businessName: {
+    type: String,
+    required: [true, "Business name is required"],
+    unique: true,
+    maxlength: 128,
+  },
   logoUrl: {
     type: String,
     default: "e7NBE6u",
     validator: function (imageUrl) {
       return /^\w+$/.test(imageUrl);
     },
-    message: (props) => `${props.value} is not a valid imgur URI path!`,
+    errorMessage: (props) => `${props.value} is not a valid imgur URI path!`,
   },
   menu: [{ type: ObjectId, ref: "MenuItem" }],
   modifications: [{ type: ObjectId, ref: "Modification" }],
@@ -73,7 +82,7 @@ vendorSchema.methods.editVendor = async function (changes) {
     }
     return await this.save();
   } catch (error) {
-    return { error, functionName: "editVendor" };
+    return { error: { ...error, functionName: "editVendor" } };
   }
 };
 
@@ -87,7 +96,7 @@ vendorSchema.methods.getMenu = async function () {
       .execPopulate();
     return { menuItems: menu, modifications };
   } catch (error) {
-    return { error, functionName: "getMenu" };
+    return { error: { ...error, functionName: "getMenu" } };
   }
 };
 
@@ -101,7 +110,7 @@ vendorSchema.methods.addMenuItem = async function (properties) {
       .execPopulate();
     return savedVendor.menu;
   } catch (error) {
-    return { error, functionName: "addMenuItem" };
+    return { error: { ...error, functionName: "addMenuItem" } };
   }
 };
 
@@ -114,7 +123,7 @@ vendorSchema.methods.removeMenuItem = async function (menuItemId) {
       .execPopulate();
     return savedVendor.menu;
   } catch (error) {
-    return { error, functionName: "removeMenuItem" };
+    return { error: { ...error, functionName: "removeMenuItem" } };
   }
 };
 
@@ -141,7 +150,7 @@ vendorSchema.methods.editMenuItem = async function (menuItemId, changes) {
       .execPopulate();
     return savedVendor.menu;
   } catch (error) {
-    return { error, functionName: "editMenuItem" };
+    return { error: { ...error, functionName: "editMenuItem" } };
   }
 };
 
@@ -159,7 +168,7 @@ vendorSchema.methods.addModification = async function (modification) {
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    return { error, functionName: "addModification" };
+    return { error: { ...error, functionName: "addModification" } };
   }
 };
 
@@ -178,7 +187,7 @@ vendorSchema.methods.removeModification = async function (modificationId) {
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    return { error, functionName: "removeModification" };
+    return { error: { ...error, functionName: "removeModification" } };
   }
 };
 
@@ -200,7 +209,7 @@ vendorSchema.methods.editModification = async function (
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    return { error, functionName: "editModification" };
+    return { error: { ...error, functionName: "editModification" } };
   }
 };
 
@@ -225,7 +234,7 @@ vendorSchema.methods.readyOrder = async function (orderId) {
       .execPopulate();
     return savedVendor;
   } catch (error) {
-    return { error, functionName: "readyOrder" };
+    return { error: { ...error, functionName: "readyOrder" } };
   }
 };
 
@@ -249,7 +258,7 @@ vendorSchema.methods.customerPickUpOrder = async function (orderId) {
       .execPopulate();
     return savedVendor;
   } catch (error) {
-    return { error, functionName: "deliverOrder" };
+    return { error: { ...error, functionName: "deliverOrder" } };
   }
 };
 
@@ -258,11 +267,11 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     const order = await Order.findById(orderId);
     const customer = await Customer.findById(order.customer);
     if (order.vendor.toString() !== this._id.toString()) {
-      return { error: { message: "Unauthorized" } };
+      return { error: { errorMessage: "Unauthorized" } };
     }
     const charge = await Payment.refundCharge(order.chargeId);
     if (charge.error) {
-      return { error: charge.error, functionName: "chargeToCard" };
+      return { error: { ...error, functionName: "refundOrder" } };
     }
     order.disposition = "CANCELED";
     customer.activeOrders.pull(orderId);
@@ -288,7 +297,7 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     });
     return refundedOrder;
   } catch (error) {
-    return { error, functionName: "chargeCartToCard" };
+    return { error: { ...error, functionName: "chargeCartToCard" } };
   }
 };
 
@@ -296,14 +305,17 @@ vendorSchema.methods.addDriver = async function (driverId) {
   try {
     const driver = await new Driver.findById(driverId);
     if (!driver) {
-      return { error: "No driver by that Id;", functionName: "addDriver" };
+      return {
+        error: { errorMessage: "No driver by that Id;" },
+        functionName: "addDriver",
+      };
     }
     this.drivers.push(driverId);
     await this.save();
     const vendorWithDrivers = await this.populate("drivers").execPopulate();
     return vendorWithDrivers.modifications;
   } catch (error) {
-    return { error, functionName: "addModification" };
+    return { error: { ...error, functionName: "addModification" } };
   }
 };
 
@@ -314,7 +326,7 @@ vendorSchema.methods.removeDriver = async function (driverId) {
     const vendorWithDrivers = await this.populate("drivers").execPopulate();
     return vendorWithDrivers.modifications;
   } catch (error) {
-    return { error, functionName: "addModification" };
+    return { error: { ...error, functionName: "addModification" } };
   }
 };
 

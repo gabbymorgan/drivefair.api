@@ -19,12 +19,15 @@ const jwtMiddleware = async (req, res, next) => {
       if (token) req.user = await validateToken(token, req, res);
     }
     if (req.user && req.user.error) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ errorMessage: "Unauthorized" });
     }
     next();
   } catch (error) {
-    logError(error, req, "jwtMiddleware");
-    next();
+    return await logError(
+      { ...error, functionName: "jwtMiddleware" },
+      req,
+      res
+    );
   }
 };
 
@@ -47,9 +50,7 @@ const logActivity = async (req, res, next) => {
     await newActivity.save();
     next();
   } catch (error) {
-    req.error = error;
-    logError(error, req, this.name);
-    next();
+    return await logError({ ...error, functionName: "logActivity" }, req, res);
   }
 };
 
