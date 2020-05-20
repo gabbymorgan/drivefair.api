@@ -10,13 +10,18 @@ const { ObjectId } = mongoose.Schema.Types;
 const customerSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: true,
+    required: [true, "Email is required."],
+
     unique: true,
     index: true,
     maxlength: 64,
   },
   emailIsConfirmed: { type: Boolean, default: false },
-  password: { type: String, required: true, maxlength: 128 },
+  password: {
+    type: String,
+    required: [true, "Password is required."],
+    maxlength: 128,
+  },
   firstName: { type: String, maxlength: 64 },
   lastName: { type: String, maxlength: 64 },
   phoneNumber: { type: String },
@@ -45,7 +50,7 @@ customerSchema.methods.createCart = async function (vendorId) {
     await this.save();
     return this.cart;
   } catch (error) {
-    return { error, functionName: "createCart" };
+    return { error: { ...error, functionName: "createCart" } };
   }
 };
 
@@ -65,7 +70,7 @@ customerSchema.methods.getCart = async function (unpopulated) {
     }
     return cart;
   } catch (error) {
-    return { error, functionName: "getCart" };
+    return { error: { ...error, functionName: "getCart" } };
   }
 };
 
@@ -74,8 +79,10 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     const cart = await Order.findById(this.cart);
     if (cart.method === "DELIVERY" && !cart.address) {
       return {
-        error: "Cannot complete order without address.",
-        functionName: "chargeCartToCard",
+        error: {
+          message: "Cannot complete order without address.",
+          functionName: "chargeCartToCard",
+        },
       };
     }
     await cart.populate("vendor").execPopulate();
@@ -83,7 +90,7 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     const { vendor } = cart;
     const charge = await createCharge(this, cart, vendor, paymentToken);
     if (charge.error) {
-      return { error: charge.error, functionName: "chargeToCard" };
+      return { error: { ...charge.error, functionName: "chargeToCard" } };
     }
     cart.disposition = "PAID";
     cart.chargeId = charge.id;
@@ -109,7 +116,7 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     });
     return savedCart;
   } catch (error) {
-    return { error, functionName: "chargeCartToCard" };
+    return { error: { ...error, functionName: "chargeCartToCard" } };
   }
 };
 
@@ -120,7 +127,7 @@ customerSchema.methods.selectAddress = async function (addressId) {
     await cart.save();
     return cart;
   } catch (error) {
-    return { error };
+    return { error: { ...error, functionName: "selectAddress" } };
   }
 };
 

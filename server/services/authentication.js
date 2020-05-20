@@ -32,7 +32,7 @@ const validateEmailToken = async (token) => {
     const { isEmailToken } = data;
     return isEmailToken;
   } catch (error) {
-    logError(error, req, "validateEmailToken");
+    return { error: { ...error, functionName: "validateEmailToken" } };
   }
 };
 

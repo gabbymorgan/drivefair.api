@@ -10,8 +10,7 @@ router
       const settings = await AppSetting.find();
       res.status(200).json({ settings });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/newSetting", async (req, res) => {
@@ -19,7 +18,11 @@ router
       const { name, value, password } = req.body;
       const { user } = req;
       if (!user || password !== process.env.APP_SETTINGS_PASSWORD) {
-        return res.status(401).json({ messgae: "Unauthorized." });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          req,
+          res
+        );
       }
       const newSetting = new AppSetting({
         name,
@@ -30,8 +33,7 @@ router
       const savedSetting = await newSetting.save();
       res.status(200).json({ savedSetting });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   })
   .post("/updateSetting", async (req, res) => {
@@ -39,14 +41,17 @@ router
       const { settingId, name, value, password } = req.body;
       const { user } = req;
       if (!user || password !== process.env.APP_SETTINGS_PASSWORD) {
-        return res.status(401).json({ messgae: "Unauthorized." });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          req,
+          res
+        );
       }
       const setting = await AppSetting.findById(settingId);
       const savedSetting = await setting.updateSetting(name, value, user._id);
       res.status(200).json({ savedSetting });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json({ error });
+      return await logError(error, req, res);
     }
   });
 

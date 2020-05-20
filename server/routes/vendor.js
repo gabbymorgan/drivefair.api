@@ -51,8 +51,7 @@ router
         ),
       });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .post("/login", async (req, res) => {
@@ -60,23 +59,24 @@ router
       const { email, password } = req.body;
       const foundVendor = await Vendor.findOne({ email });
       if (!foundVendor) {
-        logError({ message: "User not found" }, req);
-        return res
-          .status(401)
-          .json({ message: "Incorrect username and/or password." });
+        return await logError(
+          { message: "Incorrect username and/or password.", status: 401 },
+          req,
+          res
+        );
       }
       const passwordIsValid = foundVendor.validatePassword(password);
       if (!passwordIsValid) {
-        logError({ message: "Invalid password" }, req);
-        return res
-          .status(401)
-          .json({ message: "Incorrect username and/or password." });
+        return await logError(
+          { message: "Incorrect username and/or password.", status: 401 },
+          req,
+          res
+        );
       }
       const token = await signToken(foundVendor, "Vendor");
       res.status(200).json({ token, profile: foundVendor, userType: "vendor" });
     } catch (error) {
-      await logError(error, req, this.name);
-      res.status(500).json(error);
+      await logError(error, req, res);
     }
   })
   .post("/addMenuItem", async (req, res) => {
@@ -84,7 +84,11 @@ router
       const { name, description, imageUrl, price, modifications } = req.body;
       const vendor = req.user;
       if (!vendor) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          res,
+          res
+        );
       }
       const menuItems = await vendor.addMenuItem({
         name,
@@ -94,14 +98,12 @@ router
         modifications,
       });
       if (menuItems.error) {
-        const { error, functionName } = menuItems;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        const { error } = menuItems;
+        return await logError(error, req, res);
       }
       res.status(200).json({ menuItems });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .post("/removeMenuItem", async (req, res) => {
@@ -109,18 +111,19 @@ router
       const { menuItemId } = req.body;
       const vendor = req.user;
       if (!vendor) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          res,
+          res
+        );
       }
       const menuItems = await vendor.removeMenuItem(menuItemId);
       if (menuItems.error) {
-        const { error, functionName } = menuItems;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        return await logError(menuItems.error, req, res);
       }
       res.status(200).json({ menuItems });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .post("/editMenuItem", async (req, res) => {
@@ -128,18 +131,20 @@ router
       const { menuItemId, changes } = req.body;
       const vendor = req.user;
       if (!vendor.menu.includes(menuItemId)) {
-        return res.status(401).json({ message: "Unauthorized." });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          res,
+          res
+        );
       }
       const menuItems = await vendor.editMenuItem(menuItemId, changes);
       if (menuItems.error) {
-        const { error, functionName } = menuItems;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        const { error } = menuItems;
+        return await logError(error, req, res);
       }
       res.status(200).json({ menuItems });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .post("/addModification", async (req, res) => {
@@ -147,7 +152,11 @@ router
       const { name, options, type, defaultOptionIndex } = req.body;
       const vendor = req.user;
       if (!vendor) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          res,
+          res
+        );
       }
       const savedModifications = await vendor.addModification({
         name,
@@ -156,14 +165,11 @@ router
         defaultOptionIndex,
       });
       if (savedModifications.error) {
-        const { error, functionName } = savedModifications;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        return await logError(savedModifications.error, req, res);
       }
       res.status(200).json({ savedModifications });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .post("/removeModification", async (req, res) => {
@@ -171,18 +177,20 @@ router
       const { menuItemId } = req.body;
       const vendor = req.user;
       if (!vendor) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          res,
+          res
+        );
       }
       const savedModifications = await vendor.removeModification(menuItemId);
       if (savedModifications.error) {
-        const { error, functionName } = savedModifications;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        const { error } = savedModifications;
+        return await logError(error, req, res);
       }
       res.status(200).json({ savedModifications });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .post("/editModification", async (req, res) => {
@@ -194,28 +202,28 @@ router
         changes
       );
       if (savedModifications.error) {
-        const { error, functionName } = savedModifications;
-        logError(error, req, functionName);
-        return res.status(500).json(error);
+        return await logError(savedModifications.error, req, res);
       }
       res.status(200).json({ savedModifications });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .get("/confirmEmail", async (req, res) => {
     try {
       const isEmailToken = await validateEmailToken(req.query.token);
       if (!req.user || !isEmailToken) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          res,
+          res
+        );
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
       res.status(200).send(emailConfirmation.confirmed());
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .get("/me", async (req, res) => {
@@ -223,8 +231,7 @@ router
       const profile = req.user;
       res.status(200).json({ profile });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .get("/menu", async (req, res) => {
@@ -235,12 +242,11 @@ router
       else vendor = req.user;
       const foundMenu = await vendor.getMenu();
       if (foundMenu.error) {
-        logError(foundMenu.error, req, foundMenu.functionName);
+        return await logError(foundMenu.error, req, foundMenu.res);
       }
       res.status(200).json({ foundMenu });
     } catch (error) {
-      logError(error, req);
-      res.status(500).json(error);
+      logError(error, req, res);
     }
   })
   .get("/:vendorId", async (req, res) => {
@@ -248,12 +254,11 @@ router
       const { vendorId } = req.params;
       const foundVendor = await Vendor.findById(vendorId).select("-password");
       if (foundVendor.error) {
-        logError(foundVendor.error, req, foundVendor.functionName);
+        return await logError(foundVendor.error, req, foundVendor.res);
       }
       res.status(200).json({ foundVendor });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .post("/editVendor", async (req, res) => {
@@ -261,30 +266,26 @@ router
     try {
       const passwordIsValid = await vendor.validatePassword(req.body.password);
       if (!passwordIsValid) {
-        const error = { message: "Unauthorized." };
-        logError(error, req);
-        return res.status(401).json(error);
+        const error = { message: "Unauthorized.", status: 401 };
+        return await logError(error, req, res);
       }
       const savedVendor = await vendor.editVendor(req.body);
       if (savedVendor.error) {
-        logError(savedVendor.error, req, savedVendor.functionName);
+        return await logError(savedVendor.error, req, savedVendor.res);
       }
       res.status(200).json({ savedVendor });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .get("/", async (req, res) => {
-    // refactor before first dozen vendors
     try {
       const vendors = await Vendor.find({ emailIsConfirmed: true }).select(
         "-password"
       );
       res.status(200).json({ vendors });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   })
   .post("/sendConfirmationEmail", async (req, res) => {
@@ -303,8 +304,7 @@ router
       });
       res.status(200).json({ success: true });
     } catch (error) {
-      await logError(error, req);
-      res.status(500).json(error);
+      return await logError(error, req, res);
     }
   });
 
