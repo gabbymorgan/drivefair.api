@@ -47,15 +47,19 @@ router
       const { email, password } = req.body;
       const foundDriver = await Driver.findOne({ email });
       if (!foundDriver) {
-        return res
-          .status(401)
-          .json({ errorMessage: "Incorrect username and/or password." });
+        return await logError(
+          { message: "Incorrect username and/or password.", status: 401 },
+          req,
+          res
+        );
       }
       const passwordIsValid = foundDriver.validatePassword(password);
       if (!passwordIsValid) {
-        return res
-          .status(401)
-          .json({ errorMessage: "Incorrect username and/or password." });
+        return await logError(
+          { message: "Incorrect username and/or password.", status: 401 },
+          req,
+          res
+        );
       }
       const token = await signToken(foundDriver, "Driver");
       res.status(200).json({ token, profile: foundDriver, userType: "driver" });
@@ -67,7 +71,11 @@ router
     try {
       const isEmailToken = await validateEmailToken(req.query.token);
       if (!req.user || !isEmailToken) {
-        return res.status(401).json({ errorMessage: "Unauthorized" });
+        return await logError(
+          { message: "Unauthorized", status: 401 },
+          req,
+          res
+        );
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
@@ -80,7 +88,11 @@ router
     try {
       const profile = req.user;
       if (!profile) {
-        return res.status(401).json({ errorMessage: "Unauthorized." });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          req,
+          res
+        );
       }
       res.status(200).json({ profile });
     } catch (error) {
@@ -177,7 +189,6 @@ router
       if (addDeviceTokenResponse.error) {
         const { error, functionName } = addDeviceTokenResponse;
         return await logError(error, req, functionName);
-        return;
       }
       res.status(200).json({ success: true });
     } catch (error) {
@@ -189,9 +200,11 @@ router
       const { driverId, orderId } = req.body;
       const { user, userModel } = req;
       if (userModel !== "Vendor") {
-        return res
-          .status(401)
-          .json({ error: { errorMessage: "Unauthorized." } });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          req,
+          res
+        );
       }
       const driver = await Driver.findById(driverId);
       const requestDriverResponse = await driver.requestDriver(

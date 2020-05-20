@@ -142,7 +142,7 @@ driverSchema.methods.requestDriver = async function (orderId) {
   await order.populate("vendor customer address").execPopulate();
   const { vendor, customer } = order;
   if (order.driver) {
-    return { error: { errorMessage: "Order already has driver assigned." } };
+    return { error: { message: "Order already has driver assigned." } };
   }
   try {
     const title = "Incoming Order!";

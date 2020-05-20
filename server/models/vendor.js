@@ -322,7 +322,7 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     const order = await Order.findById(orderId);
     const customer = await Customer.findById(order.customer);
     if (order.vendor.toString() !== this._id.toString()) {
-      return { error: { errorMessage: "Unauthorized" } };
+      return { error: { message: "Unauthorized" } };
     }
     const charge = await Payment.refundCharge(order.chargeId);
     if (charge.error) {
@@ -359,7 +359,7 @@ vendorSchema.methods.addDriver = async function (driverId) {
     const driver = await new Driver.findById(driverId);
     if (!driver) {
       return {
-        error: { errorMessage: "No driver by that Id;" },
+        error: { message: "No driver by that Id;" },
         functionName: "addDriver",
       };
     }

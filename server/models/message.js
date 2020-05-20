@@ -35,9 +35,9 @@ const messageSchema = new mongoose.Schema({
   successCount: Number,
 });
 
-messageSchema.on("save", async function () {
+messageSchema.pre("save", async function () {
   try {
-    const { deviceTokens, title, body, data, sender, senderModel } = this;
+    const { deviceTokens, title, body, data } = this;
     const {
       successCount,
       results,
@@ -47,8 +47,6 @@ messageSchema.on("save", async function () {
       title,
       body,
       data,
-      sender,
-      senderModel,
     });
     this.successCount = successCount;
     this.results = results;
