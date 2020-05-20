@@ -3,9 +3,8 @@ const bcrypt = require("bcrypt");
 const Order = require("./order");
 const DeliveryRoute = require("./deliveryRoute");
 const Message = require("./message");
-const { sendPushNotification } = require("../services/communications");
+const Communications = require("../services/communications");
 const { getAddressString } = require("../services/location");
-const OrderStatus = require("../constants/static-pages/order-status");
 const { ObjectId } = mongoose.Schema.Types;
 
 const driverSchema = new mongoose.Schema({
@@ -35,10 +34,63 @@ const driverSchema = new mongoose.Schema({
   longitude: Number,
   status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "INACTIVE" },
   deviceTokens: [String],
+  emailSettings: { type: Object, default: {} },
+  notificationSettings: { type: Object, default: { REQUEST_DRIVER: true } },
 });
 
 driverSchema.methods.validatePassword = async function (password) {
   return await bcrypt.compare(this.password, password);
+};
+
+driverSchema.methods.sendEmail = async function ({
+  setting,
+  subject,
+  text,
+  html,
+}) {
+  if (!setting || this.emailSettings[setting]) {
+    return await Communications.sendMail({
+      to: this.email,
+      subject,
+      text,
+      html,
+    });
+  } else
+    return {
+      error: {
+        message: `Driver has turned off email setting: ${setting}`,
+        status: 401,
+      },
+    };
+};
+
+driverSchema.methods.sendPushNotification = async function ({
+  setting,
+  title,
+  body,
+  data,
+  senderId,
+  senderModel,
+}) {
+  if (!setting || this.notificationSettings[setting]) {
+    const message = new Message({
+      recipient: this._id,
+      recipientModel: "Driver",
+      sender: senderId,
+      senderModel,
+      title,
+      body,
+      data,
+      deviceTokens: this.deviceTokens,
+    });
+    return await message.save();
+  }
+  return {
+    error: {
+      message: `Driver has turned off notification setting: ${setting}`,
+      status: 401,
+    },
+  };
 };
 
 driverSchema.methods.getRoute = async function () {
@@ -105,25 +157,14 @@ driverSchema.methods.requestDriver = async function (orderId) {
       customerAddress: getAddressString(order.address),
       tip: order.tip.toString(),
     };
-    const { successCount, results, multicastId } = await sendPushNotification(
-      this.deviceTokens,
+    return await this.sendPushNotification({
+      setting: "REQUEST_DRIVER",
       title,
       body,
-      data
-    );
-    const message = new Message({
-      recipient: this._id,
-      recipientModel: "Driver",
-      sender: order.vendor._id,
+      data,
+      senderId: vendor._id,
       senderModel: "Vendor",
-      title,
-      body,
-      successCount,
-      results,
-      multicastId,
     });
-    const savedMessage = await message.save();
-    return savedMessage;
   } catch (error) {
     return { error };
   }

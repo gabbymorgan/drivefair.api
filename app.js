@@ -3,7 +3,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const { emailTransporter } = require("./server/services/communications");
+const Communications = require("./server/services/communications");
 const { jwtMiddleware, logActivity } = require("./server/services/middleware");
 const admin = require("firebase-admin");
 
@@ -16,9 +16,9 @@ const routeRouter = require("./server/routes/deliveryRoute");
 
 admin.initializeApp({
   credential: admin.credential.cert({
-    "project_id": "delivery-2a108",
-    "private_key": process.env.FIREBASE_PRIVATE_KEY,
-    "client_email": process.env.FIREBASE_CLIENT_EMAIL,
+    project_id: "delivery-2a108",
+    private_key: process.env.FIREBASE_PRIVATE_KEY,
+    client_email: process.env.FIREBASE_CLIENT_EMAIL,
   }),
   databaseURL: "https://delivery-2a108.firebaseio.com",
 });
@@ -71,9 +71,8 @@ app.use("/route", routeRouter);
 
 app.get("/", async (req, res) => {
   res.status(200).json("Hello squirrel");
-  await emailTransporter.sendMail({
+  await Communications.sendMail({
     to: process.env.EMAIL_RECIPIENT,
-    from: process.env.EMAIL_USER,
     subject: "Direct API accesss",
     text: "Someone is hitting up your API directly",
   });

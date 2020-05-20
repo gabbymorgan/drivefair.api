@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const Order = require("./order");
 const Address = require("./address");
-const { emailTransporter } = require("../services/communications");
+const Communications = require("../services/communications");
 const OrderStatus = require("../constants/static-pages/order-status");
 const { createCharge } = require("../services/payment");
 const { ObjectId } = mongoose.Schema.Types;
@@ -33,10 +33,64 @@ const customerSchema = new mongoose.Schema({
   activeOrders: [{ type: ObjectId, ref: "Order" }],
   readyOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
+  deviceTokens: [String],
+  emailSettings: { type: Object, default: {} },
+  notificationSettings: { type: Object, default: {} },
 });
 
 customerSchema.methods.validatePassword = async function (password) {
   return await bcrypt.compare(this.password, password);
+};
+
+customerSchema.methods.sendEmail = async function ({
+  setting,
+  subject,
+  text,
+  html,
+}) {
+  if (!setting || this.emailSettings[setting]) {
+    return await Communications.sendMail({
+      to: this.email,
+      subject,
+      text,
+      html,
+    });
+  }
+  return {
+    error: {
+      message: `Driver has turned off email setting: ${setting}`,
+      status: 401,
+    },
+  };
+};
+
+customerSchema.methods.sendPushNotification = async function ({
+  setting,
+  title,
+  body,
+  data,
+  senderId,
+  senderModel,
+}) {
+  if (!setting || this.notificationSettings[setting]) {
+    const message = new Message({
+      recipient: this._id,
+      recipientModel: "Customer",
+      sender: senderId,
+      senderModel,
+      title,
+      body,
+      data,
+      deviceTokens: this.deviceTokens,
+    });
+    return await message.save();
+  }
+  return {
+    error: {
+      message: `Driver has turned off notification setting: ${setting}`,
+      status: 401,
+    },
+  };
 };
 
 customerSchema.methods.createCart = async function (vendorId) {
@@ -101,21 +155,18 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     this.cart = null;
     await vendor.save();
     await this.save();
-    const savedCart = await cart.save();
-    emailTransporter.sendMail({
-      to: this.email,
-      from: process.env.EMAIL_USER,
+    await cart.save();
+    await this.sendEmail({
       subject: `Your order for ${vendor.businessName}.`,
       html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
     });
-    emailTransporter.sendMail({
-      to: vendor.email,
-      from: process.env.EMAIL_USER,
+    await vendor.sendEmail({
       subject: `You have a new order for ${cart.method}!`,
       html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
     });
-    return savedCart;
+    return cart;
   } catch (error) {
+    console.log(error);
     return { error: { ...error, functionName: "chargeCartToCard" } };
   }
 };

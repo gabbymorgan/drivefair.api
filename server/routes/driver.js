@@ -1,17 +1,14 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const Driver = require("../models/driver");
-const {
-  emailTransporter,
-  sendPushNotification,
-} = require("../services/communications");
+const Communications = require("../services/communications");
 const logError = require("../services/errorLog");
 const {
   signToken,
   signEmailToken,
   validateEmailToken,
 } = require("../services/authentication");
-const emailConfirmation = require("../constants/static-pages/email-confirmation");
+const EmailConfirmation = require("../constants/static-pages/email-confirmation");
 
 const router = express.Router();
 
@@ -32,17 +29,15 @@ router
         savedDriver,
         "Driver"
       );
-      res.status(200).json({ token, profile: savedDriver, userType: "driver" });
-      await emailTransporter.sendMail({
-        to: email,
-        from: process.env.EMAIL_USER,
+      await savedDriver.sendEmail({
         subject: `Thanks for signing up, ${firstName}!`,
-        html: emailConfirmation.request(
+        html: EmailConfirmation.request(
           "drivers",
           firstName,
           emailConfirmationToken
         ),
       });
+      res.status(200).json({ token, profile: savedDriver, userType: "driver" });
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -76,7 +71,7 @@ router
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
-      res.status(200).send(emailConfirmation.confirmed());
+      res.status(200).send(EmailConfirmation.confirmed());
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -96,11 +91,11 @@ router
     try {
       const driver = req.user;
       const emailConfirmationToken = await signEmailToken(driver, "Driver");
-      await emailTransporter.sendMail({
+      await Communications.sendmail({
         to: driver.email,
         from: process.env.EMAIL_USER,
         subject: `Thanks for signing up, ${driver.firstName}!`,
-        html: emailConfirmation.request(
+        html: EmailConfirmation.request(
           "drivers",
           driver.firstName,
           emailConfirmationToken
