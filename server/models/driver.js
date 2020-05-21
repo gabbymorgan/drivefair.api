@@ -48,20 +48,24 @@ driverSchema.methods.sendEmail = async function ({
   text,
   html,
 }) {
-  if (!setting || this.emailSettings[setting]) {
-    return await Communications.sendMail({
-      to: this.email,
-      subject,
-      text,
-      html,
-    });
-  } else
-    return {
-      error: {
-        message: `Driver has turned off email setting: ${setting}`,
-        status: 401,
-      },
-    };
+  try {
+    if (!setting || this.emailSettings[setting]) {
+      return await Communications.sendMail({
+        to: this.email,
+        subject,
+        text,
+        html,
+      });
+    } else
+      return {
+        error: {
+          message: `Driver has turned off email setting: ${setting}`,
+          status: 200,
+        },
+      };
+  } catch (error) {
+    return { error: { ...error, functionName: "sendEmail", status: 200 } };
+  }
 };
 
 driverSchema.methods.sendPushNotification = async function ({
@@ -88,7 +92,7 @@ driverSchema.methods.sendPushNotification = async function ({
   return {
     error: {
       message: `Driver has turned off notification setting: ${setting}`,
-      status: 401,
+      status: 200,
     },
   };
 };
