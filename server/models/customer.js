@@ -166,7 +166,6 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     });
     return cart;
   } catch (error) {
-    console.log(error);
     return { error: { ...error, functionName: "chargeCartToCard" } };
   }
 };

@@ -36,6 +36,7 @@ const orderSchema = new mongoose.Schema({
       "NEW",
       "PAID",
       "ACCEPTED_BY_VENDOR",
+      "WAITING_FOR_DRIVER",
       "ACCEPTED_BY_DRIVER",
       "READY",
       "ASSIGNED",
@@ -101,15 +102,15 @@ orderSchema.methods.vendorAcceptOrder = async function ({
         functionName: "vendorAcceptOrder",
       };
     }
+    this.disposition = "ACCEPTED_BY_VENDOR";
+    this.estimatedReadyTime = new Date(Date.now() + timeToReady * 60 * 1000);
+    await this.save();
     if (this.method === "DELIVERY") {
       const driverRequest = await selectedDriver.requestDriver(this._id);
       if (driverRequest.error) {
         return { error: driverRequest.error, functionName: "requestDriver" };
       }
     }
-    this.estimatedReadyTime = new Date(Date.now() + timeToReady * 60 * 1000);
-    this.disposition = "ACCEPTED_BY_VENDOR";
-    await this.save();
     await this.populate({
       path: "activeOrders",
       populate: {

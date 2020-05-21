@@ -93,6 +93,25 @@ driverSchema.methods.sendPushNotification = async function ({
   };
 };
 
+driverSchema.methods.rejectOrder = async function (orderId) {
+  try {
+    const order = await Order.findById(orderId);
+    const { vendor } = await order.populate("vendor");
+    await vendor.sendPushNotification({
+      setting: "REJECT_ORDER",
+      title: ``,
+      body,
+      data,
+      senderId,
+      senderModel,
+    });
+    await order.save();
+    return { success: true };
+  } catch (error) {
+    return { error: { ...error, functionName: "rejectOrder" } };
+  }
+};
+
 driverSchema.methods.getRoute = async function () {
   try {
     let route = await DeliveryRoute.findById(this.route);
@@ -118,15 +137,14 @@ driverSchema.methods.getRoute = async function () {
 };
 
 driverSchema.methods.toggleStatus = async function (status) {
-  if (
-    this.route &&
-    (await this.getRoute().orders.length) &&
-    status === "INACTIVE"
-  ) {
-    return {
-      error: "There are still active orders on your route!",
-      functionName: "toggleStatus",
-    };
+  if (this.route && status === "INACTIVE") {
+    const route = await this.getRoute();
+    if (route.orders.length) {
+      return {
+        error: "There are still active orders on your route!",
+        functionName: "toggleStatus",
+      };
+    }
   }
   this.status = status;
   const savedDriver = await this.save();
@@ -141,13 +159,26 @@ driverSchema.methods.addDeviceToken = async function (deviceToken) {
 };
 
 driverSchema.methods.requestDriver = async function (orderId) {
-  const order = await Order.findById(orderId);
-  await order.populate("vendor customer address").execPopulate();
-  const { vendor, customer } = order;
-  if (order.driver) {
-    return { error: { message: "Order already has driver assigned." } };
-  }
   try {
+    const order = await Order.findById(orderId);
+    await order.populate("vendor customer address").execPopulate();
+    await this.populate("route");
+    const { vendor, customer } = order;
+    if (order.driver) {
+      return { error: { message: "Order already has a driver assigned." } };
+    }
+    if (this.route && this.route.vendor !== order.vendor._id) {
+      return {
+        error: { message: "Driver is already busy with another route." },
+      };
+    }
+    if (this.status === "INACTIVE") {
+      return {
+        error: { message: "Driver is offline." },
+      };
+    }
+    order.disposition = "WAITING_FOR_DRIVER";
+    await order.save();
     const title = "Incoming Order!";
     const body = "Will you accept?";
     const data = {

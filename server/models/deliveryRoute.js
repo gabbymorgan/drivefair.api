@@ -10,33 +10,12 @@ const deliveryRouteSchema = new mongoose.Schema({
   createdOn: { type: Date, default: Date.now },
 });
 
-deliveryRouteSchema.methods.rejectOrder = async function (orderId) {
-  try {
-    if (!this.orders.find((a) => a._id.toString() === orderId)) {
-      return {
-        error: { message: "Order does not belong to this driver." },
-      };
-    }
-    this.orders.pull({ _id: orderId });
-    const foundOrder = await Order.findById(orderId);
-    foundOrder.driver = null;
-    await foundOrder.save();
-    const savedRoute = await this.save();
-    await savedRoute
-      .populate({ path: "customer vendor address", select: "-password" })
-      .execPopulate();
-    return savedRoute;
-  } catch (error) {
-    return { error: { ...error, functionName: "rejectOrder" } };
-  }
-};
-
 deliveryRouteSchema.methods.acceptOrder = async function (orderId) {
   try {
     const order = await Order.findById(orderId);
     if (
       order.driver ||
-      order.disposition !== "ACCEPTED_BY_VENDOR" ||
+      order.disposition !== "WAITING_FOR_DRIVER" ||
       order.method !== "DELIVERY"
     ) {
       return {
@@ -106,6 +85,9 @@ deliveryRouteSchema.methods.deliverOrder = async function (orderId, driver) {
     vendor.readyOrders.pull(orderId);
     vendor.orderHistory.push(orderId);
     foundOrder.disposition = "DELIVERED";
+    if (!this.orders.length) {
+      driver.route = null;
+    }
     await driver.save();
     await foundOrder.save();
     await customer.save();

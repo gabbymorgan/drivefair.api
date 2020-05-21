@@ -58,6 +58,15 @@ router
       return await logError(error, req, res);
     }
   })
-  .post("/rejectOrder", async (req, res) => {});
+  .post("/rejectOrder", async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      const driver = req.user;
+      const response = await driver.driverRejectOrder(orderId);
+      res.status(200).json(response);
+    } catch (error) {
+      return await logError(response.error, req, res);
+    }
+  });
 
 module.exports = router;

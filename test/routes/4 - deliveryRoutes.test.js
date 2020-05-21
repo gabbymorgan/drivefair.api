@@ -12,9 +12,25 @@ const { expect } = chai;
 describe("Driver Request", function () {
   const vendor = users.vendors[0];
   const driver = users.drivers[0];
-  it("driver goes active", async function () {
+  let orderId;
+
+  it("vendor fails to hail inactive driver", async function () {
     vendor.record = await Vendor.findOne({ email: vendor.email });
     driver.record = await Driver.findOne({ email: driver.email });
+    orderId = vendor.record.activeOrders[0];
+    const response = await chai
+      .request(app)
+      .post("/drivers/requestDriver")
+      .type("json")
+      .send({
+        driverId: driver.record._id,
+        orderId,
+        token: vendor.token,
+      });
+    expect(response, "Response is status 200").to.have.status(500);
+    expect(response.body, "Response has error").to.include.key("error");
+  });
+  it("driver goes active", async function () {
     const login = await chai
       .request(app)
       .post("/drivers/login")
@@ -72,7 +88,7 @@ describe("Driver Request", function () {
       .send({
         selectedDriverId: driver.record._id,
         timeToReady: 15,
-        orderId: vendor.record.activeOrders[0]._id,
+        orderId,
         token: vendor.token,
       });
     expect(response, "Response is status 200").to.have.status(200);
@@ -84,13 +100,70 @@ describe("Driver Request", function () {
       .post("/route/acceptOrder")
       .type("json")
       .send({
-        orderId: vendor.record.activeOrders[0]._id,
+        orderId,
         token: driver.token,
       });
     expect(response, "Response is status 200").to.have.status(200);
     expect(response.body, "Response has no error").to.not.have.key("error");
   });
-  // it("driver fails to go inactive with active orders ", async function () {});
-  // it("driver goes inactive ", async function () {});
-  // it("vendor fails to request inactive driver ", async function () {});
+  it("driver fails to go inactive with active orders ", async function () {
+    const response = await chai
+      .request(app)
+      .post("/drivers/toggleStatus")
+      .type("json")
+      .send({
+        status: "INACTIVE",
+        token: driver.token,
+      });
+    expect(response, "Response is status 200").to.have.status(500);
+    expect(response.body, "Response has error").to.include.key("error");
+  });
+  it("vendor readies order", async function () {
+    const response = await chai
+      .request(app)
+      .post("/orders/readyOrder")
+      .type("json")
+      .send({
+        orderId,
+        token: vendor.token,
+      });
+    expect(response, "Response is status 200").to.have.status(200);
+    expect(response.body, "Response has no error").to.not.have.key("error");
+  });
+  it("driver picks up order", async function () {
+    const response = await chai
+      .request(app)
+      .post("/route/pickUpOrder")
+      .type("json")
+      .send({
+        orderId,
+        token: driver.token,
+      });
+    expect(response, "Response is status 200").to.have.status(200);
+    expect(response.body, "Response has no error").to.not.have.key("error");
+  });
+  it("driver delivers order", async function () {
+    const response = await chai
+      .request(app)
+      .post("/route/deliverOrder")
+      .type("json")
+      .send({
+        orderId,
+        token: driver.token,
+      });
+    expect(response, "Response is status 200").to.have.status(200);
+    expect(response.body, "Response has no error").to.not.have.key("error");
+  });
+  it("driver goes inactive ", async function () {
+    const response = await chai
+      .request(app)
+      .post("/drivers/toggleStatus")
+      .type("json")
+      .send({
+        status: "INACTIVE",
+        token: driver.token,
+      });
+    expect(response, "Response is status 200").to.have.status(200);
+    expect(response.body, "Response has error").to.not.have.key("error");
+  });
 });

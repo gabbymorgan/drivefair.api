@@ -201,7 +201,7 @@ router
   .post("/requestDriver", async (req, res) => {
     try {
       const { driverId, orderId } = req.body;
-      const { user, userModel } = req;
+      const { userModel } = req;
       if (userModel !== "Vendor") {
         return await logError(
           { message: "Unauthorized.", status: 401 },
@@ -210,14 +210,10 @@ router
         );
       }
       const driver = await Driver.findById(driverId);
-      const requestDriverResponse = await driver.requestDriver(
-        user._id,
-        orderId
-      );
+      const requestDriverResponse = await driver.requestDriver(orderId);
       if (requestDriverResponse.error) {
-        const { error, functionName } = requestDriverResponse;
-        return await logError(error, req, functionName);
-        return;
+        const { error } = requestDriverResponse;
+        return await logError(error, req, res);
       }
       res.status(200).json(requestDriverResponse);
     } catch (error) {

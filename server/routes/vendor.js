@@ -74,7 +74,7 @@ router
       const token = await signToken(foundVendor, "Vendor");
       res.status(200).json({ token, profile: foundVendor, userType: "vendor" });
     } catch (error) {
-      await logError(error, req, res);
+      return await logError(error, req, res);
     }
   })
   .post("/addMenuItem", async (req, res) => {
@@ -244,7 +244,7 @@ router
       }
       res.status(200).json({ foundMenu });
     } catch (error) {
-      logError(error, req, res);
+      return await logError(error, req, res);
     }
   })
   .get("/:vendorId", async (req, res) => {

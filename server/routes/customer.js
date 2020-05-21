@@ -89,7 +89,11 @@ router
     try {
       const isEmailToken = await validateEmailToken(req.query.token);
       if (!req.user || !isEmailToken) {
-        logError({ message: "Unauthorized", status: 401 });
+        return await logError(
+          { message: "Unauthorized", status: 401 },
+          req,
+          res
+        );
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
