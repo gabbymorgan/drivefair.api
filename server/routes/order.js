@@ -147,14 +147,13 @@ router
         const { error } = acceptOrderResponse;
         return await logError(error, req, res);
       }
-      if (order.method === "DELIVERY") {
-        const requestDriverResponse = await order.requestDrivers([driverId]);
-        if (requestDriverResponse.error) {
-          return await logError(requestDriverResponse.error, req, res);
-        }
-      }
+      const requestDriverResponses =
+        order.method === "DELIVERY"
+          ? await order.requestDrivers([driverId])
+          : null;
       res.status(200).json({
         activeOrders: acceptOrderResponse.activeOrders,
+        requestDriverResponses,
       });
     } catch (error) {
       return await logError(error, req, res);
@@ -230,6 +229,27 @@ router
         readyOrders: updatedVendor.readyOrders,
         orderHistory: updatedVendor.orderHistory,
       });
+    } catch (error) {
+      return await logError(error, req, res);
+    }
+  })
+  .post("/requestDrivers", async (req, res) => {
+    try {
+      const { driverIds, orderId } = req.body;
+      const { userModel } = req;
+      if (userModel !== "Vendor") {
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          req,
+          res
+        );
+      }
+      const order = await Order.findById(orderId);
+      const requestDriverResponses = await order.requestDrivers(driverIds);
+      if (requestDriverResponses.error) {
+        return await logError(requestDriverResponses.error, req, res);
+      }
+      res.status(200).json({ requestDriverResponses });
     } catch (error) {
       return await logError(error, req, res);
     }

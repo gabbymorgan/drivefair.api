@@ -126,7 +126,7 @@ orderSchema.methods.requestDrivers = async function (driverIds) {
       const driver = await Driver.findById(driverId);
       const requestDriverResponse = await driver.requestDriver(this);
       if (requestDriverResponse.error) {
-        return { error: requestDriverResponse.error };
+        return { error: requestDriverResponse.error, success: false, driverId };
       }
       this.requestedDrivers.push(driverId);
       this.disposition = "WAITING_FOR_DRIVER";

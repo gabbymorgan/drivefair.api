@@ -4,6 +4,7 @@ const chaiHttp = require("chai-http");
 const users = require("../dummyData/users.json");
 const app = require("../../app");
 const Vendor = require("../../server/models/vendor");
+const Order = require("../../server/models/order");
 const Driver = require("../../server/models/driver");
 
 chai.use(chaiHttp);
@@ -20,14 +21,29 @@ describe("Driver Request", function () {
     orderId = vendor.record.activeOrders[0];
     const response = await chai
       .request(app)
-      .post("/driver/requestDrivers")
+      .post("/orders/requestDrivers")
       .type("json")
       .send({
         driverIds: [driver.record._id],
         orderId,
         token: vendor.token,
       });
-    console.log(response.body);
+    expect(
+      response.body.requestDriverResponses,
+      "Response has array with one driver response"
+    ).to.have.lengthOf(1);
+    expect(
+      response.body.requestDriverResponses[0].driverId,
+      "Driver response has driver Id."
+    ).to.equal(driver.record._id.toString());
+    expect(
+      response.body.requestDriverResponses[0].success,
+      "Request to driver is unsuccessful."
+    ).to.be.false;
+    expect(
+      response.body.requestDriverResponses[0].error,
+      "Request to driver has error with message."
+    ).to.include.keys("message");
   });
   it("driver goes active", async function () {
     const login = await chai
@@ -92,6 +108,26 @@ describe("Driver Request", function () {
       });
     expect(response, "Response is status 200").to.have.status(200);
     expect(response.body, "Response has no error").to.not.have.key("error");
+    expect(
+      response.body.requestDriverResponses,
+      "Response has driver request responses array with one driver response"
+    ).to.have.lengthOf(1);
+    expect(
+      response.body.requestDriverResponses[0].driverId,
+      "Driver response has driver Id."
+    ).to.equal(driver.record._id.toString());
+    expect(
+      response.body.requestDriverResponses[0].success,
+      "Request to driver is successful."
+    ).to.be.true;
+    const order = await Order.findById(orderId);
+    expect(
+      order.requestedDrivers,
+      "Order has one requested driver"
+    ).to.have.length(1);
+    expect(order.disposition, "Order is waiting for driver").to.equal(
+      "WAITING_FOR_DRIVER"
+    );
   });
   it("driver accepts order", async function () {
     const response = await chai
@@ -104,6 +140,13 @@ describe("Driver Request", function () {
       });
     expect(response, "Response is status 200").to.have.status(200);
     expect(response.body, "Response has no error").to.not.have.key("error");
+    const order = await Order.findById(orderId);
+    expect(order.disposition, "Order is waiting for driver").to.equal(
+      "ACCEPTED_BY_DRIVER"
+    );
+    expect(order.driver.toString(), "Driver is assigned to order").to.equal(
+      driver.record._id.toString()
+    );
   });
   it("driver fails to go inactive with active orders ", async function () {
     const response = await chai

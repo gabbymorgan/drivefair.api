@@ -198,27 +198,6 @@ router
     } catch (error) {
       return await logError(error, req, res);
     }
-  })
-  .post("/requestDrivers", async (req, res) => {
-    try {
-      const { driverIds, orderId } = req.body;
-      const { userModel } = req;
-      if (userModel !== "Vendor") {
-        return await logError(
-          { message: "Unauthorized.", status: 401 },
-          req,
-          res
-        );
-      }
-      const order = await Order.findById(orderId);
-      const response = await order.requestDrivers(driverIds);
-      if (response.error) {
-        return await logError(response.error, req, res);
-      }
-      res.status(200).json(response);
-    } catch (error) {
-      return await logError(error, req, res);
-    }
   });
 
 module.exports = router;
