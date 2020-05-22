@@ -1,7 +1,5 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-const Order = require("./order");
-const DeliveryRoute = require("./deliveryRoute");
 const Message = require("./message");
 const Communications = require("../services/communications");
 const { getAddressString } = require("../services/location");
@@ -27,7 +25,6 @@ const driverSchema = new mongoose.Schema({
   createdOn: { type: Date, default: Date.now },
   visits: [{ type: Date }],
   lastVisited: { type: Date, default: Date.now },
-  route: { type: ObjectId, ref: "DeliveryRoute" },
   orderHistory: [{ type: ObjectId, ref: "Order" }],
   online: Boolean,
   latitude: Number,
@@ -36,6 +33,7 @@ const driverSchema = new mongoose.Schema({
   deviceTokens: [String],
   emailSettings: { type: Object, default: {} },
   notificationSettings: { type: Object, default: { REQUEST_DRIVER: true } },
+  orders: [{ type: ObjectId, ref: "Order" }],
 });
 
 driverSchema.methods.validatePassword = async function (password) {
@@ -97,62 +95,16 @@ driverSchema.methods.sendPushNotification = async function ({
   };
 };
 
-driverSchema.methods.rejectOrder = async function (orderId) {
-  try {
-    const order = await Order.findById(orderId);
-    const { vendor } = await order.populate("vendor");
-    await vendor.sendPushNotification({
-      setting: "REJECT_ORDER",
-      title: ``,
-      body,
-      data,
-      senderId,
-      senderModel,
-    });
-    await order.save();
-    return { success: true };
-  } catch (error) {
-    return { error: { ...error, functionName: "rejectOrder" } };
-  }
-};
-
-driverSchema.methods.getRoute = async function () {
-  try {
-    let route = await DeliveryRoute.findById(this.route);
-    if (!route) {
-      route = await new DeliveryRoute({ driver: this._id }).save();
-      this.route = route._id;
-      await this.save();
-    }
-    await route
-      .populate({
-        path: "orders",
-        populate: {
-          path: "address customer vendor orderItems",
-          populate: { path: "menuItem", populate: "modifications" },
-        },
-      })
-      .populate("vendor")
-      .execPopulate();
-    return route;
-  } catch (error) {
-    return { error, functionName: "getRoute" };
-  }
-};
-
 driverSchema.methods.toggleStatus = async function (status) {
-  if (this.route && status === "INACTIVE") {
-    const route = await this.getRoute();
-    if (route.orders.length) {
-      return {
-        error: "There are still active orders on your route!",
-        functionName: "toggleStatus",
-      };
-    }
+  if (this.orders.length && status === "INACTIVE") {
+    return {
+      error: "There are still active orders on your route!",
+      functionName: "toggleStatus",
+    };
   }
   this.status = status;
-  const savedDriver = await this.save();
-  return savedDriver.status;
+  await this.save();
+  return this.status;
 };
 
 driverSchema.methods.addDeviceToken = async function (deviceToken) {
@@ -162,31 +114,32 @@ driverSchema.methods.addDeviceToken = async function (deviceToken) {
   return this;
 };
 
-driverSchema.methods.requestDriver = async function (orderId) {
+driverSchema.methods.requestDriver = async function (order) {
   try {
-    const order = await Order.findById(orderId);
-    await order.populate("vendor customer address").execPopulate();
-    await this.populate("route");
-    const { vendor, customer } = order;
     if (order.driver) {
       return { error: { message: "Order already has a driver assigned." } };
     }
-    if (this.route && this.route.vendor !== order.vendor._id) {
-      return {
-        error: { message: "Driver is already busy with another route." },
-      };
+    if (this.orders.length) {
+      await this.populate("orders").execPopulate();
+      if (this.orders[0].vendor !== order.vendor) {
+        return {
+          error: {
+            message: "Driver is currently delivering for another vendor.",
+          },
+        };
+      }
     }
     if (this.status === "INACTIVE") {
       return {
         error: { message: "Driver is offline." },
       };
     }
-    order.disposition = "WAITING_FOR_DRIVER";
-    await order.save();
+    await order.populate("vendor customer").execPopulate();
+    const { vendor, customer } = order;
     const title = "Incoming Order!";
     const body = "Will you accept?";
     const data = {
-      orderId: orderId.toString(),
+      orderId: order._id.toString(),
       messageType: "REQUEST_DRIVER",
       openModal: "true",
       businessName: vendor.businessName,

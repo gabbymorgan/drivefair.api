@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const Driver = require("../models/driver");
+const Order = require("../models/order");
 const Communications = require("../services/communications");
 const logError = require("../services/errorLog");
 const {
@@ -198,9 +199,9 @@ router
       return await logError(error, req, res);
     }
   })
-  .post("/requestDriver", async (req, res) => {
+  .post("/requestDrivers", async (req, res) => {
     try {
-      const { driverId, orderId } = req.body;
+      const { driverIds, orderId } = req.body;
       const { userModel } = req;
       if (userModel !== "Vendor") {
         return await logError(
@@ -209,13 +210,12 @@ router
           res
         );
       }
-      const driver = await Driver.findById(driverId);
-      const requestDriverResponse = await driver.requestDriver(orderId);
-      if (requestDriverResponse.error) {
-        const { error } = requestDriverResponse;
-        return await logError(error, req, res);
+      const order = await Order.findById(orderId);
+      const response = await order.requestDrivers(driverIds);
+      if (response.error) {
+        return await logError(response.error, req, res);
       }
-      res.status(200).json(requestDriverResponse);
+      res.status(200).json(response);
     } catch (error) {
       return await logError(error, req, res);
     }

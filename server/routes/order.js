@@ -129,7 +129,7 @@ router
   })
   .post("/vendorAcceptOrder", async (req, res) => {
     try {
-      const { orderId, selectedDriverId, timeToReady } = req.body;
+      const { orderId, driverId, timeToReady } = req.body;
       const vendor = req.user;
       if (!vendor.activeOrders.includes(orderId)) {
         return await logError(
@@ -139,51 +139,22 @@ router
         );
       }
       const order = await Order.findById(orderId);
-      const selectedDriver = await Driver.findById(selectedDriverId);
       const acceptOrderResponse = await order.vendorAcceptOrder({
         vendor,
-        selectedDriver,
         timeToReady,
       });
       if (acceptOrderResponse.error) {
         const { error } = acceptOrderResponse;
         return await logError(error, req, res);
       }
+      if (order.method === "DELIVERY") {
+        const requestDriverResponse = await order.requestDrivers([driverId]);
+        if (requestDriverResponse.error) {
+          return await logError(requestDriverResponse.error, req, res);
+        }
+      }
       res.status(200).json({
         activeOrders: acceptOrderResponse.activeOrders,
-      });
-    } catch (error) {
-      return await logError(error, req, res);
-    }
-  })
-  .post("/requestDriver", async (req, res) => {
-    try {
-      const { orderId, selectedDriverId } = req.body;
-      const vendor = req.user;
-      if (!vendor.activeOrders.includes(orderId)) {
-        return await logError(
-          { message: "Order not found.", status: 404 },
-          req,
-          res
-        );
-      }
-      const selectedDriver = await Driver.findById(selectedDriverId);
-      const updatedOrder = await selectedDriver.requestDriver(orderId);
-      if (updatedOrder.error) {
-        return await logError(updatedOrder.error, req, res);
-      }
-      const { activeOrders } = await vendor
-        .populate({
-          path: "activeOrders",
-          populate: {
-            path: "vendor customer address orderItems",
-            select: "-password -email",
-            populate: "menuItem",
-          },
-        })
-        .execPopulate();
-      res.status(200).json({
-        activeOrders,
       });
     } catch (error) {
       return await logError(error, req, res);

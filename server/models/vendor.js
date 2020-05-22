@@ -56,7 +56,9 @@ const vendorSchema = new mongoose.Schema({
   activeOrders: [{ type: ObjectId, ref: "Order" }],
   readyOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
-  drivers: [{ type: ObjectId, ref: "Driver" }],
+  preferredDrivers: [{ type: ObjectId, ref: "Driver" }],
+  blockedDrivers: [{ type: ObjectId, ref: "Driver" }],
+  blockedCustomers: [{ type: ObjectId, ref: "Customer" }],
   deviceTokens: [String],
   emailSettings: { type: Object, default: {} },
   notificationSettings: { type: Object, default: {} },
@@ -284,14 +286,12 @@ vendorSchema.methods.readyOrder = async function (orderId) {
     order.actualReadyTime = new Date();
     await order.save();
     await customer.save();
-    const savedVendor = await this.save();
-    await savedVendor
-      .populate({
-        path: "activeOrders readyOrders",
-        populate: "orderItems address",
-      })
-      .execPopulate();
-    return savedVendor;
+    await this.save();
+    await this.populate({
+      path: "activeOrders readyOrders",
+      populate: "orderItems address",
+    }).execPopulate();
+    return this;
   } catch (error) {
     return { error: { ...error, functionName: "readyOrder" } };
   }

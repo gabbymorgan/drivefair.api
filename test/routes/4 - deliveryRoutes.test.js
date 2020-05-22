@@ -20,15 +20,14 @@ describe("Driver Request", function () {
     orderId = vendor.record.activeOrders[0];
     const response = await chai
       .request(app)
-      .post("/drivers/requestDriver")
+      .post("/driver/requestDrivers")
       .type("json")
       .send({
-        driverId: driver.record._id,
+        driverIds: [driver.record._id],
         orderId,
         token: vendor.token,
       });
-    expect(response, "Response is status 200").to.have.status(500);
-    expect(response.body, "Response has error").to.include.key("error");
+    console.log(response.body);
   });
   it("driver goes active", async function () {
     const login = await chai
@@ -86,7 +85,7 @@ describe("Driver Request", function () {
       .post("/orders/vendorAcceptOrder")
       .type("json")
       .send({
-        selectedDriverId: driver.record._id,
+        driverId: driver.record._id,
         timeToReady: 15,
         orderId,
         token: vendor.token,

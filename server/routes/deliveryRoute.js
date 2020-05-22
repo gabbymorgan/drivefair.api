@@ -1,4 +1,5 @@
 const express = require("express");
+const Order = require("../models/order");
 const logError = require("../services/errorLog");
 
 const router = express.Router();
@@ -7,8 +8,8 @@ router
   .get("/", async (req, res) => {
     try {
       const driver = req.user;
-      const route = await driver.getRoute();
-      res.status(200).json({ route });
+      await driver.populate("orders").execPopulate();
+      res.status(200).json(driver);
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -17,13 +18,12 @@ router
     try {
       const { orderId } = req.body;
       const driver = req.user;
-      const route = await req.user.getRoute();
-      const response = await route.acceptOrder(orderId);
+      const order = await Order.findById(orderId);
+      const response = await order.driverAcceptOrder(driver._id);
       if (response.error) {
         return await logError(response.error, req, res);
       }
-      const updatedRoute = await driver.getRoute();
-      res.status(200).json({ route: updatedRoute });
+      res.status(200).json(response);
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -32,13 +32,12 @@ router
     try {
       const { orderId } = req.body;
       const driver = req.user;
-      const route = await driver.getRoute();
-      const response = await route.pickUpOrder(orderId);
+      const order = await Order.findById(orderId);
+      const response = await order.driverPickUpOrder(driver._id);
       if (response.error) {
         return await logError(response.error, req, res);
       }
-      const updatedRoute = await driver.getRoute();
-      res.status(200).json({ route: updatedRoute });
+      res.status(200).json(response);
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -47,13 +46,12 @@ router
     try {
       const { orderId } = req.body;
       const driver = req.user;
-      const route = await driver.getRoute();
-      const response = await route.deliverOrder(orderId, driver);
+      const order = await Order.findById(orderId);
+      const response = await order.driverDeliverOrder(driver._id);
       if (response.error) {
         return await logError(response.error, req, res);
       }
-      const updatedRoute = await driver.getRoute();
-      res.status(200).json({ route: updatedRoute });
+      res.status(200).json(response);
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -62,7 +60,8 @@ router
     try {
       const { orderId } = req.body;
       const driver = req.user;
-      const response = await driver.driverRejectOrder(orderId);
+      const order = await Order.findById(orderId);
+      const response = await order.driverRejectOrder(driver._id);
       res.status(200).json(response);
     } catch (error) {
       return await logError(response.error, req, res);
