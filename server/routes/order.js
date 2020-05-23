@@ -214,7 +214,7 @@ router
       const passwordIsValid = await vendor.validatePassword(password);
       if (!passwordIsValid) {
         return await logError(
-          { message: "Order not found.", status: 404 },
+          { message: "Unauthorized.", status: 401 },
           req,
           res
         );

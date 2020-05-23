@@ -105,14 +105,16 @@ orderSchema.methods.vendorAcceptOrder = async function ({
     this.disposition = "ACCEPTED_BY_VENDOR";
     this.estimatedReadyTime = new Date(Date.now() + timeToReady * 60 * 1000);
     await this.save();
-    await this.populate({
-      path: "activeOrders",
-      populate: {
-        path: "vendor customer address orderItems",
-        select: "-password -email",
-        populate: "menuItem",
-      },
-    }).execPopulate();
+    await vendor
+      .populate({
+        path: "activeOrders",
+        populate: {
+          path: "vendor customer address orderItems",
+          select: "-password -email",
+          populate: "menuItem",
+        },
+      })
+      .execPopulate();
     return this;
   } catch (error) {
     return { error, functionName: "vendorAcceptOrder" };
@@ -122,6 +124,9 @@ orderSchema.methods.vendorAcceptOrder = async function ({
 orderSchema.methods.requestDrivers = async function (driverIds) {
   try {
     const timers = {};
+    if (!driverIds.length) {
+      return;
+    }
     const requests = driverIds.map(async (driverId) => {
       const driver = await Driver.findById(driverId);
       const requestDriverResponse = await driver.requestDriver(this);
@@ -132,12 +137,12 @@ orderSchema.methods.requestDrivers = async function (driverIds) {
       this.disposition = "WAITING_FOR_DRIVER";
       await this.save();
       timers[driverId] = setTimeout(async () => {
-        this.requestedDrivers.pull(driverId);
-        if (!this.requestedDrivers.length) {
-          this.disposition = "ACCEPTED_BY_VENDOR";
+        const updatedOrder = await Order.findById(this._id);
+        updatedOrder.requestedDrivers.pull(driverId);
+        if (!updatedOrder.requestedDrivers.length && !updatedOrder.driver) {
+          updatedOrder.disposition = "ACCEPTED_BY_VENDOR";
         }
-        await this.save();
-        console.log("drivers after timers", this.requestedDrivers);
+        await updatedOrder.save();
       }, 30000);
       return {
         driverId,
@@ -181,8 +186,8 @@ orderSchema.methods.driverAcceptOrder = async function (driverId) {
       .populate({
         path: "orders",
         populate: {
-          path: "customer vendor address",
-          select: "-password",
+          path: "customer vendor address orderItems",
+          populate: "menuItem modifications",
         },
       })
       .execPopulate();
@@ -213,8 +218,8 @@ orderSchema.methods.driverPickUpOrder = async function (driverId) {
       .populate({
         path: "orders",
         populate: {
-          path: "customer vendor address",
-          select: "-password",
+          path: "customer vendor address orderItems",
+          populate: "menuItem modifications",
         },
       })
       .execPopulate();
@@ -243,6 +248,7 @@ orderSchema.methods.driverDeliverOrder = async function (driverId) {
     vendor.readyOrders.pull(orderId);
     vendor.orderHistory.push(orderId);
     this.disposition = "DELIVERED";
+    this.actualDeliveryTime = new Date();
     await this.save();
     await driver.save();
     await customer.save();

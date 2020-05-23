@@ -208,4 +208,13 @@ describe("Driver Request", function () {
     expect(response, "Response is status 200").to.have.status(200);
     expect(response.body, "Response has error").to.not.have.key("error");
   });
+  it("refunds an order", async function () {
+    const response = await chai
+      .request(app)
+      .post("/orders/refundOrder")
+      .type("json")
+      .send({ token: vendor.token, orderId, password: vendor.password });
+    expect(response, "Response is status 200").to.have.status(200);
+    expect(response.body, "Response has no error").to.not.have.key("error");
+  });
 });

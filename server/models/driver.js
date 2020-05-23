@@ -137,7 +137,7 @@ driverSchema.methods.requestDriver = async function (order) {
     await order.populate("vendor customer").execPopulate();
     const { vendor, customer } = order;
     const title = "Incoming Order!";
-    const body = "Will you accept?";
+    const body = `New order from ${vendor.businessName}.`;
     const data = {
       orderId: order._id.toString(),
       messageType: "REQUEST_DRIVER",
@@ -159,6 +159,36 @@ driverSchema.methods.requestDriver = async function (order) {
   } catch (error) {
     return { error };
   }
+};
+
+driverSchema.methods.notifyOrderReady = async function ({ vendor, order }) {
+  await this.sendPushNotification({
+    setting: "REQUEST_DRIVER",
+    title: `Order up!`,
+    body: `The order at ${vendor.businessName} is ready.`,
+    data: {
+      orderId: order._id.toString(),
+      messageType: "ORDER_READY",
+      openModal: "false",
+    },
+    senderId: vendor._id,
+    senderModel: "Vendor",
+  });
+};
+
+driverSchema.methods.notifyOrderCanceled = async function ({ vendor, order }) {
+  await this.sendPushNotification({
+    setting: "REQUEST_DRIVER",
+    title: "Order canceled.",
+    body: `The order for ${vendor.businessName} has been canceled.`,
+    data: {
+      orderId: order._id.toString(),
+      messageType: "ORDER_CANCELED",
+      openModal: "false",
+    },
+    senderId: vendor._id,
+    senderModel: "Vendor",
+  });
 };
 
 module.exports = mongoose.model("Driver", driverSchema);

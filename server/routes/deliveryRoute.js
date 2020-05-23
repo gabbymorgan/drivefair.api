@@ -8,8 +8,16 @@ router
   .get("/", async (req, res) => {
     try {
       const driver = req.user;
-      await driver.populate("orders").execPopulate();
-      res.status(200).json(driver);
+      await driver
+        .populate({
+          path: "orders",
+          populate: {
+            path: "customer vendor address orderItems",
+            populate: "menuItem modifications",
+          },
+        })
+        .execPopulate();
+      res.status(200).json({ orders: driver.orders });
     } catch (error) {
       return await logError(error, req, res);
     }

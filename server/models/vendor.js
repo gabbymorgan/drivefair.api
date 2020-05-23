@@ -276,8 +276,8 @@ vendorSchema.methods.editModification = async function (
 
 vendorSchema.methods.readyOrder = async function (orderId) {
   try {
-    const order = await Order.findById(orderId).populate("customer");
-    const { customer } = order;
+    const order = await Order.findById(orderId).populate("customer driver");
+    const { customer, driver } = order;
     customer.activeOrders.pull(orderId);
     customer.readyOrders.push(orderId);
     this.activeOrders.pull(orderId);
@@ -289,10 +289,18 @@ vendorSchema.methods.readyOrder = async function (orderId) {
     await this.save();
     await this.populate({
       path: "activeOrders readyOrders",
-      populate: "orderItems address",
+      populate: {
+        path: "vendor customer address orderItems",
+        select: "-password -email",
+        populate: "menuItem",
+      },
     }).execPopulate();
+    if (driver) {
+      await driver.notifyOrderReady({ vendor: this, order });
+    }
     return this;
   } catch (error) {
+    console.log(error);
     return { error: { ...error, functionName: "readyOrder" } };
   }
 };
@@ -324,7 +332,8 @@ vendorSchema.methods.customerPickUpOrder = async function (orderId) {
 vendorSchema.methods.refundOrder = async function (orderId) {
   try {
     const order = await Order.findById(orderId);
-    const customer = await Customer.findById(order.customer);
+    await order.populate("customer driver").execPopulate();
+    const { customer, driver } = order;
     if (order.vendor.toString() !== this._id.toString()) {
       return { error: { message: "Unauthorized" } };
     }
@@ -335,26 +344,32 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     order.disposition = "CANCELED";
     customer.activeOrders.pull(orderId);
     customer.readyOrders.pull(orderId);
-    customer.orderHisory.push(orderId);
+    customer.orderHistory.push(orderId);
     this.activeOrders.pull(orderId);
     this.readyOrders.pull(orderId);
-    this.orderHisory.push(orderId);
+    this.orderHistory.push(orderId);
+    if (driver) {
+      driver.orders.pull(orderId);
+      driver.orderHistory.push(orderId);
+      await driver.save();
+      await driver.notifyOrderCanceled({ vendor: this, order });
+    }
     await customer.save();
     await this.save();
     const refundedOrder = await order.save();
-    await Communications.sendmail({
+    await Communications.sendMail({
       to: this.email,
-      subject: `Your order for ${vendor.businessName}.`,
-      html: "Refunded",
+      subject: `Your order for ${this.businessName}.`,
+      text: "Refunded",
     });
-    await Communications.sendmail({
-      to: vendor.email,
+    await Communications.sendMail({
+      to: this.email,
       subject: `Order refunded!`,
-      html: "Refunded",
+      text: "Refunded",
     });
     return refundedOrder;
   } catch (error) {
-    return { error: { ...error, functionName: "chargeCartToCard" } };
+    return { error: { ...error, functionName: "refundOrder" } };
   }
 };
 
