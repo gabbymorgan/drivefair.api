@@ -13,7 +13,7 @@ const { expect } = chai;
 let requester;
 const dbUrls = {
   development: "mongodb://127.0.0.1:27017/delivery",
-  test: "mongodb://127.0.0.1:27017/delivery-test",
+  test: "mongodb://127.0.0.1:27017/delivery",
   production:
     "mongodb+srv://" +
     process.env.DB_USER +

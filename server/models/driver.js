@@ -134,7 +134,7 @@ driverSchema.methods.requestDriver = async function (order) {
         error: { message: "Driver is offline." },
       };
     }
-    await order.populate("vendor customer").execPopulate();
+    await order.populate("vendor customer address").execPopulate();
     const { vendor, customer } = order;
     const title = "Incoming Order!";
     const body = `New order from ${vendor.businessName}.`;
