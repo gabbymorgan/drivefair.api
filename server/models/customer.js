@@ -76,7 +76,11 @@ customerSchema.methods.sendEmail = async function ({
       },
     };
   } catch (error) {
-    return { error: { ...error, functionName: "sendEmail", status: 200 } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendEmail", status: 200 } };
   }
 };
 
@@ -88,25 +92,33 @@ customerSchema.methods.sendPushNotification = async function ({
   senderId,
   senderModel,
 }) {
-  if (setting && this.notificationSettings[setting]) {
-    const message = new Message({
-      recipient: this._id,
-      recipientModel: "Customer",
-      sender: senderId,
-      senderModel,
-      title,
-      body,
-      data,
-      deviceTokens: this.deviceTokens,
-    });
-    return await message.save();
+  try {
+    if (setting && this.notificationSettings[setting]) {
+      const message = new Message({
+        recipient: this._id,
+        recipientModel: "Customer",
+        sender: senderId,
+        senderModel,
+        title,
+        body,
+        data,
+        deviceTokens: this.deviceTokens,
+      });
+      return await message.save();
+    }
+    return {
+      error: {
+        message: `Driver has turned off notification setting: ${setting}`,
+        status: 200,
+      },
+    };
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendPushNotification" } };
   }
-  return {
-    error: {
-      message: `Driver has turned off notification setting: ${setting}`,
-      status: 200,
-    },
-  };
 };
 
 customerSchema.methods.createCart = async function (vendorId) {
@@ -120,7 +132,11 @@ customerSchema.methods.createCart = async function (vendorId) {
     await this.save();
     return this.cart;
   } catch (error) {
-    return { error: { ...error, functionName: "createCart" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "createCart" } };
   }
 };
 
@@ -140,7 +156,11 @@ customerSchema.methods.getCart = async function (unpopulated) {
     }
     return cart;
   } catch (error) {
-    return { error: { ...error, functionName: "getCart" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "getCart" } };
   }
 };
 
@@ -195,7 +215,7 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
       Object.getOwnPropertyNames(error)
     );
     return {
-      error: { message: errorString, functionName: "chargeCartToCard" },
+      error: { errorString, functionName: "chargeCartToCard" },
     };
   }
 };
@@ -207,7 +227,11 @@ customerSchema.methods.selectAddress = async function (addressId) {
     await cart.save();
     return cart;
   } catch (error) {
-    return { error: { ...error, functionName: "selectAddress" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "selectAddress" } };
   }
 };
 
@@ -221,7 +245,11 @@ customerSchema.methods.addAddress = async function (address) {
       .execPopulate();
     return addresses;
   } catch (error) {
-    return { error };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addAddress" } };
   }
 };
 
@@ -232,7 +260,11 @@ customerSchema.methods.deleteAddress = async function (addressId) {
     await this.save();
     return this.addresses;
   } catch (error) {
-    return { error };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "deleteAddress" } };
   }
 };
 
@@ -247,8 +279,10 @@ customerSchema.methods.editAddress = async function (addressId, changes) {
       )
     ) {
       return {
-        error:
-          "Address has an order in process. Changing the address now may have unintended consequences.",
+        error: {
+          message:
+            "Address has an order in process. Changing the address now may have unintended consequences.",
+        },
       };
     }
     const whiteList = [
@@ -271,7 +305,11 @@ customerSchema.methods.editAddress = async function (addressId, changes) {
     const { addresses } = await this.populate("addresses").execPopulate();
     return addresses;
   } catch (error) {
-    return { error };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "editAddress" } };
   }
 };
 

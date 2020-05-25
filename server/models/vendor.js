@@ -100,7 +100,11 @@ vendorSchema.methods.sendEmail = async function ({
       },
     };
   } catch (error) {
-    return { error: { ...error, functionName: "sendEmail", status: 200 } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendEmail", status: 200 } };
   }
 };
 
@@ -153,7 +157,11 @@ vendorSchema.methods.editVendor = async function (changes) {
     }
     return await this.save();
   } catch (error) {
-    return { error: { ...error, functionName: "editVendor" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "editVendor" } };
   }
 };
 
@@ -167,7 +175,11 @@ vendorSchema.methods.getMenu = async function () {
       .execPopulate();
     return { menuItems: menu, modifications };
   } catch (error) {
-    return { error: { ...error, functionName: "getMenu" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "getMenu" } };
   }
 };
 
@@ -181,7 +193,11 @@ vendorSchema.methods.addMenuItem = async function (properties) {
       .execPopulate();
     return savedVendor.menu;
   } catch (error) {
-    return { error: { ...error, functionName: "addMenuItem" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addMenuItem" } };
   }
 };
 
@@ -194,7 +210,11 @@ vendorSchema.methods.removeMenuItem = async function (menuItemId) {
       .execPopulate();
     return savedVendor.menu;
   } catch (error) {
-    return { error: { ...error, functionName: "removeMenuItem" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "removeMenuItem" } };
   }
 };
 
@@ -221,7 +241,11 @@ vendorSchema.methods.editMenuItem = async function (menuItemId, changes) {
       .execPopulate();
     return savedVendor.menu;
   } catch (error) {
-    return { error: { ...error, functionName: "editMenuItem" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "editMenuItem" } };
   }
 };
 
@@ -239,7 +263,11 @@ vendorSchema.methods.addModification = async function (modification) {
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "addModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addModification" } };
   }
 };
 
@@ -258,7 +286,11 @@ vendorSchema.methods.removeModification = async function (modificationId) {
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "removeModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "removeModification" } };
   }
 };
 
@@ -280,7 +312,11 @@ vendorSchema.methods.editModification = async function (
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "editModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "editModification" } };
   }
 };
 
@@ -310,8 +346,11 @@ vendorSchema.methods.readyOrder = async function (orderId) {
     }
     return this;
   } catch (error) {
-    console.log(error);
-    return { error: { ...error, functionName: "readyOrder" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "readyOrder" } };
   }
 };
 
@@ -335,7 +374,11 @@ vendorSchema.methods.customerPickUpOrder = async function (orderId) {
       .execPopulate();
     return savedVendor;
   } catch (error) {
-    return { error: { ...error, functionName: "deliverOrder" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "deliverOrder" } };
   }
 };
 
@@ -349,7 +392,11 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     }
     const charge = await Payment.refundCharge(order.chargeId);
     if (charge.error) {
-      return { error: { ...error, functionName: "refundOrder" } };
+      const errorString = JSON.stringify(
+        error,
+        Object.getOwnPropertyNames(error)
+      );
+      return { error: { errorString, functionName: "refundOrder" } };
     }
     order.disposition = "CANCELED";
     customer.activeOrders.pull(orderId);
@@ -410,7 +457,11 @@ vendorSchema.methods.addDriver = async function (driverId) {
     const vendorWithDrivers = await this.populate("drivers").execPopulate();
     return vendorWithDrivers.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "addModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addModification" } };
   }
 };
 
@@ -421,7 +472,11 @@ vendorSchema.methods.removeDriver = async function (driverId) {
     const vendorWithDrivers = await this.populate("drivers").execPopulate();
     return vendorWithDrivers.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "addModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addModification" } };
   }
 };
 

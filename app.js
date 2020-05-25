@@ -4,6 +4,8 @@ const morgan = require("morgan");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const Communications = require("./server/services/communications");
+const Authentication = require("./server/services/authentication");
+const EmailConfirmationPages = require("./server/constants/static-pages/email-confirmation");
 const { jwtMiddleware, logActivity } = require("./server/services/middleware");
 const admin = require("firebase-admin");
 
@@ -70,10 +72,20 @@ app.use("/drivers", driverRouter);
 app.use("/route", routeRouter);
 
 app.get("/unsubscribe", async (req, res) => {
-  const { token, setting } = req.query;
-  res.redirect(
-    `/${req.userModel}s/unsubscribe?token=${token}&setting=${setting}`
-  );
+  try {
+    const { emailSettings } = req.user;
+    const { setting, token } = req.query;
+    console.log({ setting });
+    const isEmailToken = await Authentication.validateEmailToken(token);
+    if (!req.user || !isEmailToken) {
+      return await logError({ message: "Unauthorized", status: 401 }, req, res);
+    }
+    req.user.emailSettings = { ...emailSettings, [setting]: false };
+    await req.user.save();
+    res.status(200).send(EmailConfirmationPages.unsubscribed(setting));
+  } catch (error) {
+    return await logError(error, req, res);
+  }
 });
 
 app.get("/", async (req, res) => {

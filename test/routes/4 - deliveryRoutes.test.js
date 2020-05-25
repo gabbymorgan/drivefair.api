@@ -157,7 +157,7 @@ describe("Driver Request", function () {
         status: "INACTIVE",
         token: driver.token,
       });
-    expect(response, "Response is status 200").to.have.status(500);
+    expect(response, "Response is status 200").to.have.status(418);
     expect(response.body, "Response has error").to.include.key("error");
   });
   it("vendor readies order", async function () {

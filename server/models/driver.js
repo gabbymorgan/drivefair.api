@@ -62,7 +62,11 @@ driverSchema.methods.sendEmail = async function ({
         },
       };
   } catch (error) {
-    return { error: { ...error, functionName: "sendEmail", status: 200 } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendEmail", status: 200 } };
   }
 };
 
@@ -98,8 +102,11 @@ driverSchema.methods.sendPushNotification = async function ({
 driverSchema.methods.toggleStatus = async function (status) {
   if (this.orders.length && status === "INACTIVE") {
     return {
-      error: "There are still active orders on your route!",
-      functionName: "toggleStatus",
+      error: {
+        message: "There are still active orders on your route!",
+        functionName: "toggleStatus",
+        status: 418,
+      },
     };
   }
   this.status = status;
@@ -157,38 +164,58 @@ driverSchema.methods.requestDriver = async function (order) {
       senderModel: "Vendor",
     });
   } catch (error) {
-    return { error };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "requestDriver" } };
   }
 };
 
 driverSchema.methods.notifyOrderReady = async function ({ vendor, order }) {
-  await this.sendPushNotification({
-    setting: "REQUEST_DRIVER",
-    title: `Order up!`,
-    body: `The order at ${vendor.businessName} is ready.`,
-    data: {
-      orderId: order._id.toString(),
-      messageType: "ORDER_READY",
-      openModal: "false",
-    },
-    senderId: vendor._id,
-    senderModel: "Vendor",
-  });
+  try {
+    await this.sendPushNotification({
+      setting: "REQUEST_DRIVER",
+      title: `Order up!`,
+      body: `The order at ${vendor.businessName} is ready.`,
+      data: {
+        orderId: order._id.toString(),
+        messageType: "ORDER_READY",
+        openModal: "false",
+      },
+      senderId: vendor._id,
+      senderModel: "Vendor",
+    });
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "notifyOrderReady" } };
+  }
 };
 
 driverSchema.methods.notifyOrderCanceled = async function ({ vendor, order }) {
-  await this.sendPushNotification({
-    setting: "REQUEST_DRIVER",
-    title: "Order canceled.",
-    body: `The order for ${vendor.businessName} has been canceled.`,
-    data: {
-      orderId: order._id.toString(),
-      messageType: "ORDER_CANCELED",
-      openModal: "false",
-    },
-    senderId: vendor._id,
-    senderModel: "Vendor",
-  });
+  try {
+    await this.sendPushNotification({
+      setting: "REQUEST_DRIVER",
+      title: "Order canceled.",
+      body: `The order for ${vendor.businessName} has been canceled.`,
+      data: {
+        orderId: order._id.toString(),
+        messageType: "ORDER_CANCELED",
+        openModal: "false",
+      },
+      senderId: vendor._id,
+      senderModel: "Vendor",
+    });
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "notifyOrderCanceled" } };
+  }
 };
 
 module.exports = mongoose.model("Driver", driverSchema);

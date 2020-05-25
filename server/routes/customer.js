@@ -100,25 +100,6 @@ router
       return await logError(error, req, res);
     }
   })
-  .get("/unsubscribe", async (req, res) => {
-    try {
-      const { emailSettings } = req.user;
-      const { setting, token } = req.query;
-      const isEmailToken = await Authentication.validateEmailToken(token);
-      if (!req.user || !isEmailToken) {
-        return await logError(
-          { message: "Unauthorized", status: 401 },
-          req,
-          res
-        );
-      }
-      req.user.emailSettings = { ...emailSettings, [setting]: false };
-      await req.user.save();
-      res.status(200).send(emailConfirmation.unsubscribed(setting));
-    } catch (error) {
-      return await logError(error, req, res);
-    }
-  })
   .get("/me", async (req, res) => {
     try {
       const profile = req.user;

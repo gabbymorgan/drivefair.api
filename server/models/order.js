@@ -119,7 +119,11 @@ orderSchema.methods.vendorAcceptOrder = async function ({
       .execPopulate();
     return this;
   } catch (error) {
-    return { error, functionName: "vendorAcceptOrder" };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "vendorAcceptOrder" } };
   }
 };
 
@@ -153,7 +157,11 @@ orderSchema.methods.requestDrivers = async function (driverIds) {
     });
     return await Promise.all(requests);
   } catch (error) {
-    return error;
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "requestDdrivers" } };
   }
 };
 
@@ -162,7 +170,11 @@ orderSchema.methods.driverRejectOrder = async function (driverId) {
     //reject the order
     return { success: true };
   } catch (error) {
-    return { error: { ...error, functionName: "driverRejectOrder" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "driverRejectOrder" } };
   }
 };
 
@@ -195,7 +207,11 @@ orderSchema.methods.driverAcceptOrder = async function (driverId) {
       .execPopulate();
     return driver;
   } catch (error) {
-    return { error, functionName: "driverAcceptOrder" };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "driverAcceptOrder" } };
   }
 };
 
@@ -227,7 +243,11 @@ orderSchema.methods.driverPickUpOrder = async function (driverId) {
       .execPopulate();
     return driver;
   } catch (error) {
-    return { error, functionName: "driverPickUpOrder" };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "driverPickUpOrder" } };
   }
 };
 
@@ -275,7 +295,11 @@ orderSchema.methods.driverDeliverOrder = async function (driverId) {
       .execPopulate();
     return driver;
   } catch (error) {
-    return { error, functionName: "driverDeliverOrder" };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "driverDeliverOrder" } };
   }
 };
 

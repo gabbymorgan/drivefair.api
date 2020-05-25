@@ -53,7 +53,11 @@ messageSchema.pre("save", async function () {
     this.multicastId = multicastId;
     return await this.save();
   } catch (error) {
-    return { error: { ...error, functionName: "onMessageSave" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "onMessageSave" } };
   }
 });
 

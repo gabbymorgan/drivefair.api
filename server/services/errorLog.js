@@ -9,8 +9,13 @@ const logError = async (err, req, res) => {
     if (err.name === "ValidationError") {
       message = err.errors[Object.keys(err.errors)[0]].message;
     }
-    console.log(err);
-    const errorString = JSON.stringify(err, Object.getOwnPropertyNames(err));
+    console.log(
+      "       ======================\n",
+      err,
+      "\n       ======================"
+    );
+    const errorString =
+      err.errorString || JSON.stringify(err, Object.getOwnPropertyNames(err));
     const { body, path, baseUrl, hostname, user } = req;
     const newErrorLog = new ErrorLog({
       error: errorString,
