@@ -1,10 +1,14 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+
 const Order = require("./order");
 const Address = require("./address");
-const { emailTransporter } = require("../services/communications");
-const OrderStatus = require("../constants/static-pages/order-status");
+const Authentication = require("../services/authentication");
+const Communications = require("../services/communications");
+const CustomerOrderStatus = require("../constants/static-pages/customer-order-status");
+const VendorOrderStatus = require("../constants/static-pages/vendor-order-status");
 const { createCharge } = require("../services/payment");
+
 const { ObjectId } = mongoose.Schema.Types;
 
 const customerSchema = new mongoose.Schema({
@@ -33,10 +37,88 @@ const customerSchema = new mongoose.Schema({
   activeOrders: [{ type: ObjectId, ref: "Order" }],
   readyOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
+  deviceTokens: [String],
+  emailSettings: {
+    type: Object,
+    default: {
+      ORDER_READY_FOR_PICKUP: true,
+      ORDER_PAID: true,
+      ORDER_DELIVERED: true,
+      ORDER_REFUNDED: true,
+    },
+  },
+  notificationSettings: { type: Object, default: {} },
 });
 
 customerSchema.methods.validatePassword = async function (password) {
   return await bcrypt.compare(this.password, password);
+};
+
+customerSchema.methods.sendEmail = async function ({
+  setting,
+  subject,
+  text,
+  html,
+}) {
+  try {
+    if (this.emailSettings[setting] || setting === "ACCOUNT") {
+      return await Communications.sendMail({
+        to: this.email,
+        subject,
+        text,
+        html,
+      });
+    }
+    return {
+      error: {
+        message: `Driver has turned off email setting: ${setting}`,
+        status: 200,
+      },
+    };
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendEmail", status: 200 } };
+  }
+};
+
+customerSchema.methods.sendPushNotification = async function ({
+  setting,
+  title,
+  body,
+  data,
+  senderId,
+  senderModel,
+}) {
+  try {
+    if (setting && this.notificationSettings[setting]) {
+      const message = new Message({
+        recipient: this._id,
+        recipientModel: "Customer",
+        sender: senderId,
+        senderModel,
+        title,
+        body,
+        data,
+        deviceTokens: this.deviceTokens,
+      });
+      return await message.save();
+    }
+    return {
+      error: {
+        message: `Driver has turned off notification setting: ${setting}`,
+        status: 200,
+      },
+    };
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendPushNotification" } };
+  }
 };
 
 customerSchema.methods.createCart = async function (vendorId) {
@@ -50,7 +132,11 @@ customerSchema.methods.createCart = async function (vendorId) {
     await this.save();
     return this.cart;
   } catch (error) {
-    return { error: { ...error, functionName: "createCart" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "createCart" } };
   }
 };
 
@@ -70,7 +156,11 @@ customerSchema.methods.getCart = async function (unpopulated) {
     }
     return cart;
   } catch (error) {
-    return { error: { ...error, functionName: "getCart" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "getCart" } };
   }
 };
 
@@ -101,22 +191,32 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     this.cart = null;
     await vendor.save();
     await this.save();
-    const savedCart = await cart.save();
-    emailTransporter.sendMail({
-      to: this.email,
-      from: process.env.EMAIL_USER,
+    await cart.save();
+    const vendorToken = await Authentication.signEmailToken(vendor, "Vendor");
+    const customerToken = await Authentication.signEmailToken(this, "Customer");
+    await this.sendEmail({
+      setting: "ORDER_PAID",
       subject: `Your order for ${vendor.businessName}.`,
-      html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
+      html: CustomerOrderStatus.paid(
+        this.firstName,
+        vendor.businessName,
+        customerToken
+      ),
     });
-    emailTransporter.sendMail({
-      to: vendor.email,
-      from: process.env.EMAIL_USER,
+    await vendor.sendEmail({
+      setting: "ORDER_PAID",
       subject: `You have a new order for ${cart.method}!`,
-      html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
+      html: VendorOrderStatus.paid(this.firstName, this.lastName, vendorToken),
     });
-    return savedCart;
+    return cart;
   } catch (error) {
-    return { error: { ...error, functionName: "chargeCartToCard" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return {
+      error: { errorString, functionName: "chargeCartToCard" },
+    };
   }
 };
 
@@ -127,7 +227,11 @@ customerSchema.methods.selectAddress = async function (addressId) {
     await cart.save();
     return cart;
   } catch (error) {
-    return { error: { ...error, functionName: "selectAddress" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "selectAddress" } };
   }
 };
 
@@ -141,7 +245,11 @@ customerSchema.methods.addAddress = async function (address) {
       .execPopulate();
     return addresses;
   } catch (error) {
-    return { error };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addAddress" } };
   }
 };
 
@@ -152,7 +260,11 @@ customerSchema.methods.deleteAddress = async function (addressId) {
     await this.save();
     return this.addresses;
   } catch (error) {
-    return { error };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "deleteAddress" } };
   }
 };
 
@@ -167,8 +279,10 @@ customerSchema.methods.editAddress = async function (addressId, changes) {
       )
     ) {
       return {
-        error:
-          "Address has an order in process. Changing the address now may have unintended consequences.",
+        error: {
+          message:
+            "Address has an order in process. Changing the address now may have unintended consequences.",
+        },
       };
     }
     const whiteList = [
@@ -191,7 +305,11 @@ customerSchema.methods.editAddress = async function (addressId, changes) {
     const { addresses } = await this.populate("addresses").execPopulate();
     return addresses;
   } catch (error) {
-    return { error };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "editAddress" } };
   }
 };
 

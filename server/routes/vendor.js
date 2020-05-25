@@ -1,14 +1,9 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const Vendor = require("../models/vendor");
-const { emailTransporter } = require("../services/communications");
-const {
-  signToken,
-  signEmailToken,
-  validateEmailToken,
-} = require("../services/authentication");
+const Authentication = require("../services/authentication");
+const EmailConfirmationPages = require("../constants/static-pages/email-confirmation");
 const logError = require("../services/errorLog");
-const emailConfirmation = require("../constants/static-pages/email-confirmation");
 
 const router = express.Router();
 
@@ -34,22 +29,21 @@ router
         logoUrl,
       });
       const savedVendor = await newVendor.save();
-      const token = await signToken(savedVendor, "Vendor");
-      const emailConfirmationToken = await signEmailToken(
+      const token = await Authentication.signToken(savedVendor, "Vendor");
+      const emailConfirmationToken = await Authentication.signEmailToken(
         savedVendor,
         "Vendor"
       );
-      res.status(200).json({ profile: savedVendor, token });
-      await emailTransporter.sendMail({
-        to: email,
-        from: process.env.EMAIL_USER,
+      await savedVendor.sendEmail({
+        setting: "ACCOUNT",
         subject: `Thanks for signing up, ${businessName}!`,
-        html: emailConfirmation.request(
+        html: EmailConfirmationPages.request(
           "vendors",
           businessName,
           emailConfirmationToken
         ),
       });
+      res.status(200).json({ profile: savedVendor, token });
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -73,10 +67,10 @@ router
           res
         );
       }
-      const token = await signToken(foundVendor, "Vendor");
+      const token = await Authentication.signToken(foundVendor, "Vendor");
       res.status(200).json({ token, profile: foundVendor, userType: "vendor" });
     } catch (error) {
-      await logError(error, req, res);
+      return await logError(error, req, res);
     }
   })
   .post("/addMenuItem", async (req, res) => {
@@ -211,7 +205,9 @@ router
   })
   .get("/confirmEmail", async (req, res) => {
     try {
-      const isEmailToken = await validateEmailToken(req.query.token);
+      const isEmailToken = await Authentication.validateEmailToken(
+        req.query.token
+      );
       if (!req.user || !isEmailToken) {
         return await logError(
           { message: "Unauthorized.", status: 401 },
@@ -221,7 +217,7 @@ router
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
-      res.status(200).send(emailConfirmation.confirmed());
+      res.status(200).send(EmailConfirmationPages.confirmed());
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -246,7 +242,7 @@ router
       }
       res.status(200).json({ foundMenu });
     } catch (error) {
-      logError(error, req, res);
+      return await logError(error, req, res);
     }
   })
   .get("/:vendorId", async (req, res) => {
@@ -291,12 +287,14 @@ router
   .post("/sendConfirmationEmail", async (req, res) => {
     try {
       const vendor = req.user;
-      const emailConfirmationToken = await signEmailToken(vendor, "Vendor");
-      await emailTransporter.sendMail({
-        to: vendor.email,
-        from: process.env.EMAIL_USER,
+      const emailConfirmationToken = await Authentication.signEmailToken(
+        vendor,
+        "Vendor"
+      );
+      await vendor.sendEmail({
+        setting: "ACCOUNT",
         subject: `Thanks for signing up, ${vendor.businessName}!`,
-        html: emailConfirmation.request(
+        html: EmailConfirmationPages.request(
           "vendors",
           vendor.businessName,
           emailConfirmationToken

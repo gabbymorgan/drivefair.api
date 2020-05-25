@@ -1,13 +1,8 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const Customer = require("../models/customer");
-const { emailTransporter } = require("../services/communications");
+const Authentication = require("../services/authentication");
 const logError = require("../services/errorLog");
-const {
-  signToken,
-  signEmailToken,
-  validateEmailToken,
-} = require("../services/authentication");
 const emailConfirmation = require("../constants/static-pages/email-confirmation");
 
 const router = express.Router();
@@ -32,17 +27,13 @@ router
         address,
       });
       const savedCustomer = await newCustomer.save();
-      const token = await signToken(savedCustomer, "Customer");
-      const emailConfirmationToken = await signEmailToken(
+      const token = await Authentication.signToken(savedCustomer, "Customer");
+      const emailConfirmationToken = await Authentication.signEmailToken(
         savedCustomer,
         "Customer"
       );
-      res
-        .status(200)
-        .json({ token, profile: savedCustomer, userType: "customer" });
-      await emailTransporter.sendMail({
-        to: email,
-        from: process.env.EMAIL_USER,
+      await savedCustomer.sendEmail({
+        setting: "ACCOUNT",
         subject: `Thanks for signing up, ${firstName}!`,
         html: emailConfirmation.request(
           "customers",
@@ -50,6 +41,9 @@ router
           emailConfirmationToken
         ),
       });
+      res
+        .status(200)
+        .json({ token, profile: savedCustomer, userType: "customer" });
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -79,7 +73,7 @@ router
           res
         );
       }
-      const token = await signToken(foundCustomer, "Customer");
+      const token = await Authentication.signToken(foundCustomer, "Customer");
       res
         .status(200)
         .json({ token, profile: foundCustomer, userType: "customer" });
@@ -89,9 +83,15 @@ router
   })
   .get("/confirmEmail", async (req, res) => {
     try {
-      const isEmailToken = await validateEmailToken(req.query.token);
+      const isEmailToken = await Authentication.validateEmailToken(
+        req.query.token
+      );
       if (!req.user || !isEmailToken) {
-        logError({ message: "Unauthorized", status: 401 });
+        return await logError(
+          { message: "Unauthorized", status: 401 },
+          req,
+          res
+        );
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
@@ -119,10 +119,12 @@ router
   .post("/sendConfirmationEmail", async (req, res) => {
     try {
       const customer = req.user;
-      const emailConfirmationToken = await signEmailToken(customer, "Customer");
-      await emailTransporter.sendMail({
-        to: customer.email,
-        from: process.env.EMAIL_USER,
+      const emailConfirmationToken = await Authentication.signEmailToken(
+        customer,
+        "Customer"
+      );
+      await customer.sendEmail({
+        setting: "ACCOUNT",
         subject: `Thanks for signing up, ${customer.firstName}!`,
         html: emailConfirmation.request(
           "customers",

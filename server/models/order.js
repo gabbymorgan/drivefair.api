@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 const { ObjectId } = mongoose.Schema.Types;
 
 const MenuItem = require("./menuItem");
+const Driver = require("./driver");
+const Authentication = require("../services/authentication");
+const CustomerOrderStatus = require("../constants/static-pages/customer-order-status");
 
 const orderItemSchema = new mongoose.Schema({
   menuItem: {
@@ -36,9 +39,9 @@ const orderSchema = new mongoose.Schema({
       "NEW",
       "PAID",
       "ACCEPTED_BY_VENDOR",
+      "WAITING_FOR_DRIVER",
       "ACCEPTED_BY_DRIVER",
       "READY",
-      "ASSIGNED",
       "EN_ROUTE",
       "DELIVERED",
       "CANCELED",
@@ -46,6 +49,7 @@ const orderSchema = new mongoose.Schema({
     default: "NEW",
   },
   chargeId: String,
+  requestedDrivers: [{ type: Object, ref: "Driver", default: [] }],
 });
 
 orderSchema.methods.addOrderItem = async function (menuItemId, modifications) {
@@ -91,36 +95,211 @@ orderSchema.methods.removeOrderItem = async function (itemId) {
 
 orderSchema.methods.vendorAcceptOrder = async function ({
   vendor,
-  selectedDriver,
   timeToReady,
 }) {
   try {
     if (this.vendor.toString() !== vendor._id.toString()) {
       return {
-        error: { errorMessage: "Unauthorized" },
+        error: { message: "Unauthorized" },
         functionName: "vendorAcceptOrder",
       };
     }
-    if (this.method === "DELIVERY") {
-      const driverRequest = await selectedDriver.requestDriver(this._id);
-      if (driverRequest.error) {
-        return { error: driverRequest.error, functionName: "requestDriver" };
-      }
-    }
-    this.estimatedReadyTime = new Date(Date.now() + timeToReady * 60 * 1000);
     this.disposition = "ACCEPTED_BY_VENDOR";
+    this.estimatedReadyTime = new Date(Date.now() + timeToReady * 60 * 1000);
     await this.save();
-    await this.populate({
-      path: "activeOrders",
-      populate: {
-        path: "vendor customer address orderItems",
-        select: "-password -email",
-        populate: "menuItem",
-      },
-    }).execPopulate();
+    await vendor
+      .populate({
+        path: "activeOrders",
+        populate: {
+          path: "vendor customer address orderItems",
+          select: "-password -email",
+          populate: "menuItem",
+        },
+      })
+      .execPopulate();
     return this;
   } catch (error) {
-    return { error, functionName: "vendorAcceptOrder" };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "vendorAcceptOrder" } };
+  }
+};
+
+orderSchema.methods.requestDrivers = async function (driverIds) {
+  try {
+    const timers = {};
+    if (!driverIds.length) {
+      return;
+    }
+    const requests = driverIds.map(async (driverId) => {
+      const driver = await Driver.findById(driverId);
+      const requestDriverResponse = await driver.requestDriver(this);
+      if (requestDriverResponse.error) {
+        return { error: requestDriverResponse.error, success: false, driverId };
+      }
+      this.requestedDrivers.push(driverId);
+      this.disposition = "WAITING_FOR_DRIVER";
+      await this.save();
+      timers[driverId] = setTimeout(async () => {
+        const updatedOrder = await Order.findById(this._id);
+        updatedOrder.requestedDrivers.pull(driverId);
+        if (!updatedOrder.requestedDrivers.length && !updatedOrder.driver) {
+          updatedOrder.disposition = "ACCEPTED_BY_VENDOR";
+        }
+        await updatedOrder.save();
+      }, 60000);
+      return {
+        driverId,
+        success: true,
+      };
+    });
+    return await Promise.all(requests);
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "requestDdrivers" } };
+  }
+};
+
+orderSchema.methods.driverRejectOrder = async function (driverId) {
+  try {
+    //reject the order
+    return { success: true };
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "driverRejectOrder" } };
+  }
+};
+
+orderSchema.methods.driverAcceptOrder = async function (driverId) {
+  try {
+    const driver = await Driver.findById(driverId);
+    if (
+      this.driver ||
+      this.disposition !== "WAITING_FOR_DRIVER" ||
+      this.method !== "DELIVERY"
+    ) {
+      return {
+        error: { message: "Order not available." },
+        functionName: "driverAcceptOrder",
+      };
+    }
+    this.disposition = "ACCEPTED_BY_DRIVER";
+    this.driver = driverId;
+    driver.orders.push(this._id);
+    await this.save();
+    await driver.save();
+    await driver
+      .populate({
+        path: "orders",
+        populate: {
+          path: "customer vendor address orderItems",
+          populate: "menuItem modifications",
+        },
+      })
+      .execPopulate();
+    return driver;
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "driverAcceptOrder" } };
+  }
+};
+
+orderSchema.methods.driverPickUpOrder = async function (driverId) {
+  try {
+    const driver = await Driver.findById(driverId);
+    if (this.driver.toString() !== driverId.toString()) {
+      return {
+        error: { message: "Order does not belong to this driver." },
+      };
+    }
+    if (this.disposition !== "READY") {
+      return {
+        error: "Order is not ready to pick up.",
+        functionName: "driverPickUpOrder",
+      };
+    }
+    this.disposition = "EN_ROUTE";
+    await this.save();
+    await driver.save();
+    await driver
+      .populate({
+        path: "orders",
+        populate: {
+          path: "customer vendor address orderItems",
+          populate: "menuItem modifications",
+        },
+      })
+      .execPopulate();
+    return driver;
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "driverPickUpOrder" } };
+  }
+};
+
+orderSchema.methods.driverDeliverOrder = async function (driverId) {
+  try {
+    const orderId = this._id;
+    const driver = await Driver.findById(driverId);
+    if (this.driver.toString() !== driverId.toString()) {
+      return {
+        error: "Order does not belong to this driver.",
+        functionName: "driverDeliverOrder",
+      };
+    }
+    await this.populate("customer vendor").execPopulate();
+    const { customer, vendor } = this;
+    driver.orders.pull(orderId);
+    driver.orderHistory.push(orderId);
+    customer.readyOrders.pull(orderId);
+    customer.orderHistory.push(orderId);
+    vendor.readyOrders.pull(orderId);
+    vendor.orderHistory.push(orderId);
+    this.disposition = "DELIVERED";
+    this.actualDeliveryTime = new Date();
+    await this.save();
+    await driver.save();
+    await customer.save();
+    await vendor.save();
+    await customer.sendEmail({
+      setting: "ORDER_DELIVERED",
+      subject: "Your order has arrived!",
+      html: CustomerOrderStatus.delivered(
+        customer.firstName,
+        vendor.businessName,
+        await Authentication.signEmailToken(customer, "Customer")
+      ),
+    });
+    await driver
+      .populate({
+        path: "orders",
+        populate: {
+          path: "customer vendor address",
+          select: "-password",
+        },
+      })
+      .execPopulate();
+    return driver;
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "driverDeliverOrder" } };
   }
 };
 

@@ -1,0 +1,34 @@
+{
+  "customers": [
+    {
+      "firstName": "Johnnie",
+      "lastName": "Hayles",
+      "email": "drivefairapp@gmail.com",
+      "phoneNumber": "515-639-7141",
+      "password": "password"
+    }
+  ],
+  "vendors": [
+    {
+      "businessName": "Herzog, Bernhard and Abbott",
+      "email": "drivefairapp@gmail.com",
+      "phoneNumber": "919-409-3971",
+      "password": "password",
+      "street": "709 Elka Drive",
+      "unit": 55,
+      "city": "Raleigh",
+      "state": "North Carolina",
+      "zip": "27635",
+      "logoUrl": "S3OVfWX"
+    }
+  ],
+  "drivers": [
+    {
+      "firstName": "Margarethe",
+      "lastName": "Kropp",
+      "email": "drivefairapp@gmail.com",
+      "phoneNumber": "221-188-1601",
+      "password": "password"
+    }
+  ]
+}

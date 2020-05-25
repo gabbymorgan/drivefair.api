@@ -24,7 +24,21 @@ const confirmed = () => `
 </html>
 `;
 
+const unsubscribed = (setting) => `
+<html>
+  <body>
+    <script>setTimeout(() => window.location = "${process.env.FRONTEND_URL}", 3000)</script>
+    <div style="height:100vh;display:flex;justify-content:center;align-items:center;text-align:center">
+      <p style="font-size:2rem">
+        Unsubscribed from emails related to ${setting}. Redirecting...
+      </p>
+    </div>
+  </body>
+</html>
+`;
+
 module.exports = {
   confirmed,
   request,
+  unsubscribed,
 };

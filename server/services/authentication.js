@@ -1,18 +1,8 @@
 const jwt = require("jsonwebtoken");
-const { logError } = require("./errorLog");
-const Vendor = require("../models/vendor");
-const Customer = require("../models/customer");
-const Driver = require("../models/driver");
-
-const models = {
-  Vendor,
-  Customer,
-  Driver,
-};
 
 const { JWT_EXPIRY_INTERVAL, JWT_SECRET_KEY } = process.env;
 
-const validateToken = async (token, req, res) => {
+const validateToken = async (token, models, req, res) => {
   try {
     const { data } = jwt.verify(token, JWT_SECRET_KEY);
     const { email, userType } = data;

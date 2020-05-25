@@ -4,10 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "NODE_ENV=test mocha --timeout 10000 './test/**/*.test.js' -r dotenv/config",
-    "test-dev": "NODE_ENV=development mocha --timeout 10000 './test/**/*.test.js'  -r dotenv/config",
     "start": "node app.js",
-    "develop": "NODE_ENV=production nodemon -r dotenv/config app.js"
+    "dev": "NODE_ENV=development nodemon -r dotenv/config app.js",
+    "int": "NODE_ENV=production nodemon -r dotenv/config app.js",
+    "test": "NODE_ENV=test mocha --timeout 10000 './test/**/*.test.js' -r dotenv/config",
+    "test-int": "NODE_ENV=production mocha --timeout 10000 './test/**/*.test.js' -r dotenv/config"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,7 @@
   },
   "homepage": "https://github.com/runranron/delivery-app.api#readme",
   "dependencies": {
+    "@sendgrid/mail": "^7.1.1",
     "axios": "^0.19.2",
     "bcrypt": "^4.0.1",
     "chai": "^4.2.0",

@@ -1,17 +1,11 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
+
+const EmailConfirmationPages = require("../constants/static-pages/email-confirmation");
+const Authentication = require("../services/authentication");
+const Communications = require("../services/communications");
 const Driver = require("../models/driver");
-const {
-  emailTransporter,
-  sendPushNotification,
-} = require("../services/communications");
 const logError = require("../services/errorLog");
-const {
-  signToken,
-  signEmailToken,
-  validateEmailToken,
-} = require("../services/authentication");
-const emailConfirmation = require("../constants/static-pages/email-confirmation");
 
 const router = express.Router();
 
@@ -27,22 +21,21 @@ router
         phoneNumber,
       });
       const savedDriver = await newDriver.save();
-      const token = await signToken(savedDriver, "Driver");
-      const emailConfirmationToken = await signEmailToken(
+      const token = await Authentication.signToken(savedDriver, "Driver");
+      const EmailConfirmationPagesToken = await Authentication.signEmailToken(
         savedDriver,
         "Driver"
       );
-      res.status(200).json({ token, profile: savedDriver, userType: "driver" });
-      await emailTransporter.sendMail({
-        to: email,
-        from: process.env.EMAIL_USER,
+      await savedDriver.sendEmail({
+        setting: "ACCOUNT",
         subject: `Thanks for signing up, ${firstName}!`,
-        html: emailConfirmation.request(
+        html: EmailConfirmationPages.request(
           "drivers",
           firstName,
-          emailConfirmationToken
+          EmailConfirmationPagesToken
         ),
       });
+      res.status(200).json({ token, profile: savedDriver, userType: "driver" });
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -52,17 +45,21 @@ router
       const { email, password } = req.body;
       const foundDriver = await Driver.findOne({ email });
       if (!foundDriver) {
-        return res
-          .status(401)
-          .json({ errorMessage: "Incorrect username and/or password." });
+        return await logError(
+          { message: "Incorrect username and/or password.", status: 401 },
+          req,
+          res
+        );
       }
       const passwordIsValid = foundDriver.validatePassword(password);
       if (!passwordIsValid) {
-        return res
-          .status(401)
-          .json({ errorMessage: "Incorrect username and/or password." });
+        return await logError(
+          { message: "Incorrect username and/or password.", status: 401 },
+          req,
+          res
+        );
       }
-      const token = await signToken(foundDriver, "Driver");
+      const token = await Authentication.signToken(foundDriver, "Driver");
       res.status(200).json({ token, profile: foundDriver, userType: "driver" });
     } catch (error) {
       return await logError(error, req, res);
@@ -70,13 +67,19 @@ router
   })
   .get("/confirmEmail", async (req, res) => {
     try {
-      const isEmailToken = await validateEmailToken(req.query.token);
+      const isEmailToken = await Authnentication.validateEmailToken(
+        req.query.token
+      );
       if (!req.user || !isEmailToken) {
-        return res.status(401).json({ errorMessage: "Unauthorized" });
+        return await logError(
+          { message: "Unauthorized", status: 401 },
+          req,
+          res
+        );
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
-      res.status(200).send(emailConfirmation.confirmed());
+      res.status(200).send(EmailConfirmationPages.confirmed());
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -85,7 +88,11 @@ router
     try {
       const profile = req.user;
       if (!profile) {
-        return res.status(401).json({ errorMessage: "Unauthorized." });
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          req,
+          res
+        );
       }
       res.status(200).json({ profile });
     } catch (error) {
@@ -95,15 +102,18 @@ router
   .post("/sendConfirmationEmail", async (req, res) => {
     try {
       const driver = req.user;
-      const emailConfirmationToken = await signEmailToken(driver, "Driver");
-      await emailTransporter.sendMail({
+      const EmailConfirmationPagesToken = await Authentication.signEmailToken(
+        driver,
+        "Driver"
+      );
+      await Communications.sendmail({
         to: driver.email,
         from: process.env.EMAIL_USER,
         subject: `Thanks for signing up, ${driver.firstName}!`,
-        html: emailConfirmation.request(
+        html: EmailConfirmationPages.request(
           "drivers",
           driver.firstName,
-          emailConfirmationToken
+          EmailConfirmationPagesToken
         ),
       });
       res.status(200).json({ success: true });
@@ -137,7 +147,10 @@ router
   })
   .get("/active", async (req, res) => {
     try {
-      const drivers = await Driver.find({ status: "ACTIVE" });
+      const drivers = await Driver.find({
+        status: "ACTIVE",
+        route: null,
+      });
       res.status(200).json({ drivers });
     } catch (error) {
       return await logError(error, req, res);
@@ -182,33 +195,8 @@ router
       if (addDeviceTokenResponse.error) {
         const { error, functionName } = addDeviceTokenResponse;
         return await logError(error, req, functionName);
-        return;
       }
       res.status(200).json({ success: true });
-    } catch (error) {
-      return await logError(error, req, res);
-    }
-  })
-  .post("/requestDriver", async (req, res) => {
-    try {
-      const { driverId, orderId } = req.body;
-      const { user, userModel } = req;
-      if (userModel !== "Vendor") {
-        return res
-          .status(401)
-          .json({ error: { errorMessage: "Unauthorized." } });
-      }
-      const driver = await Driver.findById(driverId);
-      const requestDriverResponse = await driver.requestDriver(
-        user._id,
-        orderId
-      );
-      if (requestDriverResponse.error) {
-        const { error, functionName } = requestDriverResponse;
-        return await logError(error, req, functionName);
-        return;
-      }
-      res.status(200).json(requestDriverResponse);
     } catch (error) {
       return await logError(error, req, res);
     }

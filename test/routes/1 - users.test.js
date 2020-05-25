@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const chaiHttp = require("chai-http");
 
 const app = require("../../app");
-const users = require("../dummyData/users.json");
+const users = require("../dummyData/singleUser.json");
 const Vendor = require("../../server/models/vendor");
 const Customer = require("../../server/models/customer");
 const Driver = require("../../server/models/driver");
@@ -13,7 +13,7 @@ const { expect } = chai;
 let requester;
 const dbUrls = {
   development: "mongodb://127.0.0.1:27017/delivery",
-  test: "mongodb://127.0.0.1:27017/delivery-test",
+  test: "mongodb://127.0.0.1:27017/delivery",
   production:
     "mongodb+srv://" +
     process.env.DB_USER +

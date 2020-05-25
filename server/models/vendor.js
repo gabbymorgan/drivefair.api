@@ -1,12 +1,16 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const { ObjectId } = mongoose.Schema.Types;
+
 const Order = require("./order");
-const Customer = require("./customer");
 const Modification = require("./modification");
 const MenuItem = require("./menuItem");
 const Driver = require("./driver");
+const Authentication = require("../services/authentication");
+const Communications = require("../services/communications");
+const CustomerOrderStatus = require("../constants/static-pages/customer-order-status");
+const VendorOrderStatus = require("../constants/static-pages/vendor-order-status");
 const Payment = require("../services/payment");
-const { ObjectId } = mongoose.Schema.Types;
 
 const vendorSchema = new mongoose.Schema({
   email: {
@@ -55,11 +59,82 @@ const vendorSchema = new mongoose.Schema({
   activeOrders: [{ type: ObjectId, ref: "Order" }],
   readyOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
-  drivers: [{ type: ObjectId, ref: "Driver" }],
+  preferredDrivers: [{ type: ObjectId, ref: "Driver" }],
+  blockedDrivers: [{ type: ObjectId, ref: "Driver" }],
+  blockedCustomers: [{ type: ObjectId, ref: "Customer" }],
+  deviceTokens: [String],
+  emailSettings: {
+    type: Object,
+    default: {
+      ORDER_PAID: true,
+      ORDER_DELIVERED: true,
+      ORDER_REFUNDED: true,
+    },
+  },
+  notificationSettings: { type: Object, default: {} },
 });
 
 vendorSchema.methods.validatePassword = async function (password) {
   return await bcrypt.compare(password, this.password);
+};
+
+vendorSchema.methods.sendEmail = async function ({
+  setting,
+  subject,
+  text,
+  html,
+}) {
+  try {
+    if (this.emailSettings[setting] || setting === "ACCOUNT") {
+      return await Communications.sendMail({
+        to: this.email,
+        subject,
+        text,
+        html,
+      });
+    }
+    return {
+      error: {
+        message: `Driver has turned off email setting: ${setting}`,
+        status: 401,
+      },
+    };
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendEmail", status: 200 } };
+  }
+};
+
+vendorSchema.methods.sendPushNotification = async function ({
+  setting,
+  title,
+  body,
+  data,
+  senderId,
+  senderModel,
+}) {
+  if (setting && this.notificationSettings[setting]) {
+    const message = new Message({
+      recipient: this._id,
+      recipientModel: "Vendor",
+      sender: senderId,
+      senderModel,
+      title,
+      body,
+      data,
+      deviceTokens: this.deviceTokens,
+    });
+    return await message.save();
+  }
+  return {
+    error: {
+      message: `Driver has turned off notification setting: ${setting}`,
+      status: 200,
+    },
+  };
 };
 
 vendorSchema.methods.editVendor = async function (changes) {
@@ -82,7 +157,11 @@ vendorSchema.methods.editVendor = async function (changes) {
     }
     return await this.save();
   } catch (error) {
-    return { error: { ...error, functionName: "editVendor" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "editVendor" } };
   }
 };
 
@@ -96,7 +175,11 @@ vendorSchema.methods.getMenu = async function () {
       .execPopulate();
     return { menuItems: menu, modifications };
   } catch (error) {
-    return { error: { ...error, functionName: "getMenu" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "getMenu" } };
   }
 };
 
@@ -110,7 +193,11 @@ vendorSchema.methods.addMenuItem = async function (properties) {
       .execPopulate();
     return savedVendor.menu;
   } catch (error) {
-    return { error: { ...error, functionName: "addMenuItem" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addMenuItem" } };
   }
 };
 
@@ -123,7 +210,11 @@ vendorSchema.methods.removeMenuItem = async function (menuItemId) {
       .execPopulate();
     return savedVendor.menu;
   } catch (error) {
-    return { error: { ...error, functionName: "removeMenuItem" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "removeMenuItem" } };
   }
 };
 
@@ -150,7 +241,11 @@ vendorSchema.methods.editMenuItem = async function (menuItemId, changes) {
       .execPopulate();
     return savedVendor.menu;
   } catch (error) {
-    return { error: { ...error, functionName: "editMenuItem" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "editMenuItem" } };
   }
 };
 
@@ -168,7 +263,11 @@ vendorSchema.methods.addModification = async function (modification) {
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "addModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addModification" } };
   }
 };
 
@@ -187,7 +286,11 @@ vendorSchema.methods.removeModification = async function (modificationId) {
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "removeModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "removeModification" } };
   }
 };
 
@@ -209,14 +312,18 @@ vendorSchema.methods.editModification = async function (
     ).execPopulate();
     return vendorWithModifications.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "editModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "editModification" } };
   }
 };
 
 vendorSchema.methods.readyOrder = async function (orderId) {
   try {
-    const order = await Order.findById(orderId).populate("customer");
-    const { customer } = order;
+    const order = await Order.findById(orderId).populate("customer driver");
+    const { customer, driver } = order;
     customer.activeOrders.pull(orderId);
     customer.readyOrders.push(orderId);
     this.activeOrders.pull(orderId);
@@ -225,16 +332,25 @@ vendorSchema.methods.readyOrder = async function (orderId) {
     order.actualReadyTime = new Date();
     await order.save();
     await customer.save();
-    const savedVendor = await this.save();
-    await savedVendor
-      .populate({
-        path: "activeOrders readyOrders",
-        populate: "orderItems address",
-      })
-      .execPopulate();
-    return savedVendor;
+    await this.save();
+    await this.populate({
+      path: "activeOrders readyOrders",
+      populate: {
+        path: "vendor customer address orderItems",
+        select: "-password -email",
+        populate: "menuItem",
+      },
+    }).execPopulate();
+    if (driver) {
+      await driver.notifyOrderReady({ vendor: this, order });
+    }
+    return this;
   } catch (error) {
-    return { error: { ...error, functionName: "readyOrder" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "readyOrder" } };
   }
 };
 
@@ -258,46 +374,72 @@ vendorSchema.methods.customerPickUpOrder = async function (orderId) {
       .execPopulate();
     return savedVendor;
   } catch (error) {
-    return { error: { ...error, functionName: "deliverOrder" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "deliverOrder" } };
   }
 };
 
 vendorSchema.methods.refundOrder = async function (orderId) {
   try {
     const order = await Order.findById(orderId);
-    const customer = await Customer.findById(order.customer);
+    await order.populate("customer driver").execPopulate();
+    const { customer, driver } = order;
     if (order.vendor.toString() !== this._id.toString()) {
-      return { error: { errorMessage: "Unauthorized" } };
+      return { error: { message: "Unauthorized" } };
     }
     const charge = await Payment.refundCharge(order.chargeId);
     if (charge.error) {
-      return { error: { ...error, functionName: "refundOrder" } };
+      const errorString = JSON.stringify(
+        error,
+        Object.getOwnPropertyNames(error)
+      );
+      return { error: { errorString, functionName: "refundOrder" } };
     }
     order.disposition = "CANCELED";
     customer.activeOrders.pull(orderId);
     customer.readyOrders.pull(orderId);
-    customer.orderHisory.push(orderId);
+    customer.orderHistory.push(orderId);
     this.activeOrders.pull(orderId);
     this.readyOrders.pull(orderId);
-    this.orderHisory.push(orderId);
+    this.orderHistory.push(orderId);
+    if (driver) {
+      driver.orders.pull(orderId);
+      driver.orderHistory.push(orderId);
+      await driver.save();
+      await driver.notifyOrderCanceled({ vendor: this, order });
+    }
     await customer.save();
     await this.save();
     const refundedOrder = await order.save();
-    await emailTransporter.sendMail({
-      to: this.email,
-      from: process.env.EMAIL_USER,
-      subject: `Your order for ${vendor.businessName}.`,
-      html: "Refunded",
+    const vendorToken = await Authentication.signEmailToken(this, "Vendor");
+    const customerToken = await Authentication.signEmailToken(
+      customer,
+      "Customer"
+    );
+    await this.sendEmail({
+      setting: "ORDER_REFUNDED",
+      subject: `Your order for ${this.businessName}.`,
+      html: VendorOrderStatus.refunded(
+        customer.firstName,
+        customer.lastName,
+        vendorToken
+      ),
     });
-    await emailTransporter.sendMail({
-      to: vendor.email,
-      from: process.env.EMAIL_USER,
+    await customer.sendEmail({
+      setting: "ORDER_REFUNDED",
       subject: `Order refunded!`,
-      html: "Refunded",
+      html: CustomerOrderStatus.refunded(this.businessName, customerToken),
     });
     return refundedOrder;
   } catch (error) {
-    return { error: { ...error, functionName: "chargeCartToCard" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "refundOrder" } };
   }
 };
 
@@ -306,7 +448,7 @@ vendorSchema.methods.addDriver = async function (driverId) {
     const driver = await new Driver.findById(driverId);
     if (!driver) {
       return {
-        error: { errorMessage: "No driver by that Id;" },
+        error: { message: "No driver by that Id;" },
         functionName: "addDriver",
       };
     }
@@ -315,7 +457,11 @@ vendorSchema.methods.addDriver = async function (driverId) {
     const vendorWithDrivers = await this.populate("drivers").execPopulate();
     return vendorWithDrivers.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "addModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addModification" } };
   }
 };
 
@@ -326,7 +472,11 @@ vendorSchema.methods.removeDriver = async function (driverId) {
     const vendorWithDrivers = await this.populate("drivers").execPopulate();
     return vendorWithDrivers.modifications;
   } catch (error) {
-    return { error: { ...error, functionName: "addModification" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "addModification" } };
   }
 };
 

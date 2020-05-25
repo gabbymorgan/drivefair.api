@@ -1,28 +1,50 @@
-const nodemailer = require("nodemailer");
+// const nodemailer = require("nodemailer");
 const admin = require("firebase-admin");
+const sgMail = require("@sendgrid/mail");
 
-const emailTransporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE,
-  host: process.env.EMAIL_HOST,
-  secureConnection: false,
-  port: 465,
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
+const sendMail = async ({ to, subject, text, html }) => {
+  const msg = {
+    to,
+    from: process.env.EMAIL_USER,
+    subject,
+    text,
+    html,
+  };
+  return process.env.NODE_ENV === "production" ? await sgMail.send(msg) : {};
+};
 
-  tls: {
-    ciphers: process.env.EMAIL_CIPHERS,
-  },
-});
+//  Nodemailer version in case we need to jump ship from SendGrid
+// const emailTransporter = nodemailer.createTransport({
+//   service: process.env.EMAIL_SERVICE,
+//   host: process.env.EMAIL_HOST,
+//   secureConnection: false,
+//   port: 465,
 
-emailTransporter.sendMail =
-  process.env.NODE_ENV === "production"
-    ? emailTransporter.sendMail
-    : async () => true;
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASSWORD,
+//   },
 
-const sendPushNotification = async (deviceTokens, title, body, data) => {
+//   tls: {
+//     ciphers: process.env.EMAIL_CIPHERS,
+//   },
+// });
+
+// const sendMail = async ({ to, subject, text, html }) => {
+//   return process.env.NODE_ENV === "production"
+//     ? await emailTransporter.sendMail({
+//         from: process.env.EMAIL_USER,
+//         to,
+//         subject,
+//         text,
+//         html,
+//       })
+//     : true;
+// };
+
+const sendPushNotification = async ({ deviceTokens, title, body, data }) => {
   const message = await admin.messaging().sendToDevice(
     deviceTokens,
     {
@@ -40,6 +62,6 @@ const sendPushNotification = async (deviceTokens, title, body, data) => {
 };
 
 module.exports = {
-  emailTransporter,
+  sendMail,
   sendPushNotification,
 };

@@ -129,7 +129,7 @@ router
   })
   .post("/vendorAcceptOrder", async (req, res) => {
     try {
-      const { orderId, selectedDriverId, timeToReady } = req.body;
+      const { orderId, driverId, timeToReady } = req.body;
       const vendor = req.user;
       if (!vendor.activeOrders.includes(orderId)) {
         return await logError(
@@ -139,51 +139,21 @@ router
         );
       }
       const order = await Order.findById(orderId);
-      const selectedDriver = await Driver.findById(selectedDriverId);
       const acceptOrderResponse = await order.vendorAcceptOrder({
         vendor,
-        selectedDriver,
         timeToReady,
       });
       if (acceptOrderResponse.error) {
         const { error } = acceptOrderResponse;
         return await logError(error, req, res);
       }
+      const requestDriverResponses =
+        order.method === "DELIVERY"
+          ? await order.requestDrivers([driverId])
+          : null;
       res.status(200).json({
         activeOrders: acceptOrderResponse.activeOrders,
-      });
-    } catch (error) {
-      return await logError(error, req, res);
-    }
-  })
-  .post("/requestDriver", async (req, res) => {
-    try {
-      const { orderId, selectedDriverId } = req.body;
-      const vendor = req.user;
-      if (!vendor.activeOrders.includes(orderId)) {
-        return await logError(
-          { message: "Order not found.", status: 404 },
-          req,
-          res
-        );
-      }
-      const selectedDriver = await Driver.findById(selectedDriverId);
-      const updatedOrder = await selectedDriver.requestDriver(orderId);
-      if (updatedOrder.error) {
-        return await logError(updatedOrder.error, req, res);
-      }
-      const { activeOrders } = await vendor
-        .populate({
-          path: "activeOrders",
-          populate: {
-            path: "vendor customer address orderItems",
-            select: "-password -email",
-            populate: "menuItem",
-          },
-        })
-        .execPopulate();
-      res.status(200).json({
-        activeOrders,
+        requestDriverResponses,
       });
     } catch (error) {
       return await logError(error, req, res);
@@ -244,7 +214,7 @@ router
       const passwordIsValid = await vendor.validatePassword(password);
       if (!passwordIsValid) {
         return await logError(
-          { message: "Order not found.", status: 404 },
+          { message: "Unauthorized.", status: 401 },
           req,
           res
         );
@@ -259,6 +229,27 @@ router
         readyOrders: updatedVendor.readyOrders,
         orderHistory: updatedVendor.orderHistory,
       });
+    } catch (error) {
+      return await logError(error, req, res);
+    }
+  })
+  .post("/requestDrivers", async (req, res) => {
+    try {
+      const { driverIds, orderId } = req.body;
+      const { userModel } = req;
+      if (userModel !== "Vendor") {
+        return await logError(
+          { message: "Unauthorized.", status: 401 },
+          req,
+          res
+        );
+      }
+      const order = await Order.findById(orderId);
+      const requestDriverResponses = await order.requestDrivers(driverIds);
+      if (requestDriverResponses.error) {
+        return await logError(requestDriverResponses.error, req, res);
+      }
+      res.status(200).json({ requestDriverResponses });
     } catch (error) {
       return await logError(error, req, res);
     }

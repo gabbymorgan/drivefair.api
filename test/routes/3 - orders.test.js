@@ -4,7 +4,7 @@ const Payment = require("../../server/services/payment");
 const chaiHttp = require("chai-http");
 
 const app = require("../../app");
-const users = require("../dummyData/users.json");
+const users = require("../dummyData/singleUser.json");
 const Vendor = require("../../server/models/vendor");
 const MenuItem = require("../../server/models/menuItem");
 
@@ -95,32 +95,34 @@ describe("Pickup Orders", function () {
         .type("json")
         .send({ email, password });
       vendor.token = login.body.token;
-      const orderRequests = login.body.profile.activeOrders.map(async (orderId) => {
-        const readyResponse = await chai
-          .request(app)
-          .post("/orders/readyOrder")
-          .type("json")
-          .send({
-            orderId,
-            token: vendor.token,
-          });
-        expect(readyResponse, "Response is status 200").to.have.status(200);
-        expect(readyResponse.body, "Response has no error").to.not.have.key(
-          "error"
-        );
-        const pickUpResponse = await chai
-          .request(app)
-          .post("/orders/customerPickUpOrder")
-          .type("json")
-          .send({
-            orderId,
-            token: vendor.token,
-          });
-        expect(pickUpResponse, "Response is status 200").to.have.status(200);
-        expect(pickUpResponse.body, "Response has no error").to.not.have.key(
-          "error"
-        );
-      });
+      const orderRequests = login.body.profile.activeOrders.map(
+        async (orderId) => {
+          const readyResponse = await chai
+            .request(app)
+            .post("/orders/readyOrder")
+            .type("json")
+            .send({
+              orderId,
+              token: vendor.token,
+            });
+          expect(readyResponse, "Response is status 200").to.have.status(200);
+          expect(readyResponse.body, "Response has no error").to.not.have.key(
+            "error"
+          );
+          const pickUpResponse = await chai
+            .request(app)
+            .post("/orders/customerPickUpOrder")
+            .type("json")
+            .send({
+              orderId,
+              token: vendor.token,
+            });
+          expect(pickUpResponse, "Response is status 200").to.have.status(200);
+          expect(pickUpResponse.body, "Response has no error").to.not.have.key(
+            "error"
+          );
+        }
+      );
       await Promise.all(orderRequests);
     });
     await Promise.all(requests);

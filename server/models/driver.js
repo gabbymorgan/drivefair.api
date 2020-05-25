@@ -1,11 +1,8 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-const Order = require("./order");
-const DeliveryRoute = require("./deliveryRoute");
 const Message = require("./message");
-const { sendPushNotification } = require("../services/communications");
+const Communications = require("../services/communications");
 const { getAddressString } = require("../services/location");
-const OrderStatus = require("../constants/static-pages/order-status");
 const { ObjectId } = mongoose.Schema.Types;
 
 const driverSchema = new mongoose.Schema({
@@ -28,54 +25,93 @@ const driverSchema = new mongoose.Schema({
   createdOn: { type: Date, default: Date.now },
   visits: [{ type: Date }],
   lastVisited: { type: Date, default: Date.now },
-  route: { type: ObjectId, ref: "DeliveryRoute" },
   orderHistory: [{ type: ObjectId, ref: "Order" }],
   online: Boolean,
   latitude: Number,
   longitude: Number,
   status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "INACTIVE" },
   deviceTokens: [String],
+  emailSettings: { type: Object, default: {} },
+  notificationSettings: { type: Object, default: { REQUEST_DRIVER: true } },
+  orders: [{ type: ObjectId, ref: "Order" }],
 });
 
 driverSchema.methods.validatePassword = async function (password) {
   return await bcrypt.compare(this.password, password);
 };
 
-driverSchema.methods.getRoute = async function () {
+driverSchema.methods.sendEmail = async function ({
+  setting,
+  subject,
+  text,
+  html,
+}) {
   try {
-    let route = await DeliveryRoute.findById(this.route);
-    if (!route) {
-      route = await new DeliveryRoute({ driver: this._id }).save();
-      this.route = route._id;
-      await this.save();
-    }
-    await route
-      .populate({
-        path: "orders",
-        populate: {
-          path: "address customer vendor orderItems",
-          populate: { path: "menuItem", populate: "modifications" },
+    if (this.emailSettings[setting] || setting === "ACCOUNT") {
+      return await Communications.sendMail({
+        to: this.email,
+        subject,
+        text,
+        html,
+      });
+    } else
+      return {
+        error: {
+          message: `Driver has turned off email setting: ${setting}`,
+          status: 200,
         },
-      })
-      .populate("vendor")
-      .execPopulate();
-    return route;
+      };
   } catch (error) {
-    return { error, functionName: "getRoute" };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendEmail", status: 200 } };
   }
 };
 
+driverSchema.methods.sendPushNotification = async function ({
+  setting,
+  title,
+  body,
+  data,
+  senderId,
+  senderModel,
+}) {
+  if (setting && this.notificationSettings[setting]) {
+    const message = new Message({
+      recipient: this._id,
+      recipientModel: "Driver",
+      sender: senderId,
+      senderModel,
+      title,
+      body,
+      data,
+      deviceTokens: this.deviceTokens,
+    });
+    return await message.save();
+  }
+  return {
+    error: {
+      message: `Driver has turned off notification setting: ${setting}`,
+      status: 200,
+    },
+  };
+};
+
 driverSchema.methods.toggleStatus = async function (status) {
-  const route = await this.getRoute();
-  if (route.orders && route.orders.length && status === "INACTIVE") {
+  if (this.orders.length && status === "INACTIVE") {
     return {
-      error: "There are still active orders on your route!",
-      functionName: "toggleStatus",
+      error: {
+        message: "There are still active orders on your route!",
+        functionName: "toggleStatus",
+        status: 418,
+      },
     };
   }
   this.status = status;
-  const savedDriver = await this.save();
-  return savedDriver.status;
+  await this.save();
+  return this.status;
 };
 
 driverSchema.methods.addDeviceToken = async function (deviceToken) {
@@ -85,18 +121,32 @@ driverSchema.methods.addDeviceToken = async function (deviceToken) {
   return this;
 };
 
-driverSchema.methods.requestDriver = async function (orderId) {
-  const order = await Order.findById(orderId);
-  await order.populate("vendor customer address").execPopulate();
-  const { vendor, customer } = order;
-  if (order.driver) {
-    return { error: { errorMessage: "Order already has driver assigned." } };
-  }
+driverSchema.methods.requestDriver = async function (order) {
   try {
+    if (order.driver) {
+      return { error: { message: "Order already has a driver assigned." } };
+    }
+    if (this.orders.length) {
+      await this.populate("orders").execPopulate();
+      if (this.orders[0].vendor !== order.vendor) {
+        return {
+          error: {
+            message: "Driver is currently delivering for another vendor.",
+          },
+        };
+      }
+    }
+    if (this.status === "INACTIVE") {
+      return {
+        error: { message: "Driver is offline." },
+      };
+    }
+    await order.populate("vendor customer address").execPopulate();
+    const { vendor, customer } = order;
     const title = "Incoming Order!";
-    const body = "Will you accept?";
+    const body = `New order from ${vendor.businessName}.`;
     const data = {
-      orderId: orderId.toString(),
+      orderId: order._id.toString(),
       messageType: "REQUEST_DRIVER",
       openModal: "true",
       businessName: vendor.businessName,
@@ -105,27 +155,66 @@ driverSchema.methods.requestDriver = async function (orderId) {
       customerAddress: getAddressString(order.address),
       tip: order.tip.toString(),
     };
-    const { successCount, results, multicastId } = await sendPushNotification(
-      this.deviceTokens,
+    return await this.sendPushNotification({
+      setting: "REQUEST_DRIVER",
       title,
       body,
-      data
-    );
-    const message = new Message({
-      recipient: this._id,
-      recipientModel: "Driver",
-      sender: order.vendor._id,
+      data,
+      senderId: vendor._id,
       senderModel: "Vendor",
-      title,
-      body,
-      successCount,
-      results,
-      multicastId,
     });
-    const savedMessage = await message.save();
-    return savedMessage;
   } catch (error) {
-    return { error };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "requestDriver" } };
+  }
+};
+
+driverSchema.methods.notifyOrderReady = async function ({ vendor, order }) {
+  try {
+    await this.sendPushNotification({
+      setting: "REQUEST_DRIVER",
+      title: `Order up!`,
+      body: `The order at ${vendor.businessName} is ready.`,
+      data: {
+        orderId: order._id.toString(),
+        messageType: "ORDER_READY",
+        openModal: "false",
+      },
+      senderId: vendor._id,
+      senderModel: "Vendor",
+    });
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "notifyOrderReady" } };
+  }
+};
+
+driverSchema.methods.notifyOrderCanceled = async function ({ vendor, order }) {
+  try {
+    await this.sendPushNotification({
+      setting: "REQUEST_DRIVER",
+      title: "Order canceled.",
+      body: `The order for ${vendor.businessName} has been canceled.`,
+      data: {
+        orderId: order._id.toString(),
+        messageType: "ORDER_CANCELED",
+        openModal: "false",
+      },
+      senderId: vendor._id,
+      senderModel: "Vendor",
+    });
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "notifyOrderCanceled" } };
   }
 };
 
