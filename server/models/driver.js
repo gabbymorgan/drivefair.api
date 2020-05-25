@@ -47,7 +47,7 @@ driverSchema.methods.sendEmail = async function ({
   html,
 }) {
   try {
-    if (!setting || this.emailSettings[setting]) {
+    if (this.emailSettings[setting] || setting === "ACCOUNT") {
       return await Communications.sendMail({
         to: this.email,
         subject,
@@ -74,7 +74,7 @@ driverSchema.methods.sendPushNotification = async function ({
   senderId,
   senderModel,
 }) {
-  if (!setting || this.notificationSettings[setting]) {
+  if (setting && this.notificationSettings[setting]) {
     const message = new Message({
       recipient: this._id,
       recipientModel: "Driver",

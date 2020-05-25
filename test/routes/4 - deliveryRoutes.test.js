@@ -1,7 +1,7 @@
 const chai = require("chai");
 const chaiHttp = require("chai-http");
 
-const users = require("../dummyData/users.json");
+const users = require("../dummyData/singleUser.json");
 const app = require("../../app");
 const Vendor = require("../../server/models/vendor");
 const Order = require("../../server/models/order");

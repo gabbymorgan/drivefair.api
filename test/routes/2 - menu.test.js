@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const chaiHttp = require("chai-http");
 
 const app = require("../../app");
-const users = require("../dummyData/users.json");
+const users = require("../dummyData/singleUser.json");
 const menuItems = require("../dummyData/menuItems.json");
 const Vendor = require("../../server/models/vendor");
 

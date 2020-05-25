@@ -1,51 +1,8 @@
-[{
-  "name": "Bandwagon Latte",
-  "price": 5,
-  "description": "240-595-2008",
-  "imageUrl": "WYIWtGA"
-}, {
-  "name": "Miral Latte",
-  "price": 5,
-  "description": "666-698-7725",
-  "imageUrl": "WYIWtGA"
-}, {
-  "name": "At the Devil's Door Latte",
-  "price": 5,
-  "description": "963-229-0485",
-  "imageUrl": "WYIWtGA"
-}, {
-  "name": "Sayonara Latte",
-  "price": 5,
-  "description": "676-778-1020",
-  "imageUrl": "WYIWtGA"
-}, {
-  "name": "Virtual JFK: Vietnam If Kennedy Had Lived Latte",
-  "price": 5,
-  "description": "279-684-3187",
-  "imageUrl": "WYIWtGA"
-}, {
-  "name": "Amadeus Latte",
-  "price": 5,
-  "description": "273-882-2954",
-  "imageUrl": "WYIWtGA"
-}, {
-  "name": "Jack the Giant Slayer Latte",
-  "price": 5,
-  "description": "400-423-1546",
-  "imageUrl": "WYIWtGA"
-}, {
-  "name": "Maria's Lovers Latte",
-  "price": 5,
-  "description": "747-317-5939",
-  "imageUrl": "WYIWtGA"
-}, {
-  "name": "Little Otik (Otesánek) Latte",
-  "price": 5,
-  "description": "216-501-0746",
-  "imageUrl": "WYIWtGA"
-}, {
-  "name": "Ritz, The Latte",
-  "price": 5,
-  "description": "575-384-6763",
-  "imageUrl": "WYIWtGA"
-}]
+[
+  {
+    "name": "Bandwagon Latte",
+    "price": 5,
+    "description": "It's a latte, but then you put things in it and it's got a cool name.",
+    "imageUrl": "WYIWtGA"
+  }
+]

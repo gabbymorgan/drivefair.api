@@ -1,10 +1,14 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+
 const Order = require("./order");
 const Address = require("./address");
+const Authentication = require("../services/authentication");
 const Communications = require("../services/communications");
-const OrderStatus = require("../constants/static-pages/order-status");
+const CustomerOrderStatus = require("../constants/static-pages/customer-order-status");
+const VendorOrderStatus = require("../constants/static-pages/vendor-order-status");
 const { createCharge } = require("../services/payment");
+
 const { ObjectId } = mongoose.Schema.Types;
 
 const customerSchema = new mongoose.Schema({
@@ -34,7 +38,15 @@ const customerSchema = new mongoose.Schema({
   readyOrders: [{ type: ObjectId, ref: "Order" }],
   orderHistory: [{ type: ObjectId, ref: "Order" }],
   deviceTokens: [String],
-  emailSettings: { type: Object, default: {} },
+  emailSettings: {
+    type: Object,
+    default: {
+      ORDER_READY_FOR_PICKUP: true,
+      ORDER_PAID: true,
+      ORDER_DELIVERED: true,
+      ORDER_REFUNDED: true,
+    },
+  },
   notificationSettings: { type: Object, default: {} },
 });
 
@@ -49,7 +61,7 @@ customerSchema.methods.sendEmail = async function ({
   html,
 }) {
   try {
-    if (!setting || this.emailSettings[setting]) {
+    if (this.emailSettings[setting] || setting === "ACCOUNT") {
       return await Communications.sendMail({
         to: this.email,
         subject,
@@ -76,7 +88,7 @@ customerSchema.methods.sendPushNotification = async function ({
   senderId,
   senderModel,
 }) {
-  if (!setting || this.notificationSettings[setting]) {
+  if (setting && this.notificationSettings[setting]) {
     const message = new Message({
       recipient: this._id,
       recipientModel: "Customer",
@@ -160,17 +172,31 @@ customerSchema.methods.chargeCartToCard = async function (paymentToken) {
     await vendor.save();
     await this.save();
     await cart.save();
+    const vendorToken = await Authentication.signEmailToken(vendor, "Vendor");
+    const customerToken = await Authentication.signEmailToken(this, "Customer");
     await this.sendEmail({
+      setting: "ORDER_PAID",
       subject: `Your order for ${vendor.businessName}.`,
-      html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
+      html: CustomerOrderStatus.paid(
+        this.firstName,
+        vendor.businessName,
+        customerToken
+      ),
     });
     await vendor.sendEmail({
+      setting: "ORDER_PAID",
       subject: `You have a new order for ${cart.method}!`,
-      html: OrderStatus.paidAndBeingMade(this.firstName, vendor.businessName),
+      html: VendorOrderStatus.paid(this.firstName, this.lastName, vendorToken),
     });
     return cart;
   } catch (error) {
-    return { error: { ...error, functionName: "chargeCartToCard" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return {
+      error: { message: errorString, functionName: "chargeCartToCard" },
+    };
   }
 };
 

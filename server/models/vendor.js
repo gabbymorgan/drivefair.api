@@ -1,13 +1,16 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const { ObjectId } = mongoose.Schema.Types;
+
 const Order = require("./order");
-const Customer = require("./customer");
 const Modification = require("./modification");
 const MenuItem = require("./menuItem");
 const Driver = require("./driver");
-const Payment = require("../services/payment");
+const Authentication = require("../services/authentication");
 const Communications = require("../services/communications");
-const { ObjectId } = mongoose.Schema.Types;
+const CustomerOrderStatus = require("../constants/static-pages/customer-order-status");
+const VendorOrderStatus = require("../constants/static-pages/vendor-order-status");
+const Payment = require("../services/payment");
 
 const vendorSchema = new mongoose.Schema({
   email: {
@@ -60,7 +63,14 @@ const vendorSchema = new mongoose.Schema({
   blockedDrivers: [{ type: ObjectId, ref: "Driver" }],
   blockedCustomers: [{ type: ObjectId, ref: "Customer" }],
   deviceTokens: [String],
-  emailSettings: { type: Object, default: {} },
+  emailSettings: {
+    type: Object,
+    default: {
+      ORDER_PAID: true,
+      ORDER_DELIVERED: true,
+      ORDER_REFUNDED: true,
+    },
+  },
   notificationSettings: { type: Object, default: {} },
 });
 
@@ -75,7 +85,7 @@ vendorSchema.methods.sendEmail = async function ({
   html,
 }) {
   try {
-    if (!setting || this.emailSettings[setting]) {
+    if (this.emailSettings[setting] || setting === "ACCOUNT") {
       return await Communications.sendMail({
         to: this.email,
         subject,
@@ -102,7 +112,7 @@ vendorSchema.methods.sendPushNotification = async function ({
   senderId,
   senderModel,
 }) {
-  if (!setting || this.notificationSettings[setting]) {
+  if (setting && this.notificationSettings[setting]) {
     const message = new Message({
       recipient: this._id,
       recipientModel: "Vendor",
@@ -357,19 +367,32 @@ vendorSchema.methods.refundOrder = async function (orderId) {
     await customer.save();
     await this.save();
     const refundedOrder = await order.save();
-    await Communications.sendMail({
-      to: this.email,
+    const vendorToken = await Authentication.signEmailToken(this, "Vendor");
+    const customerToken = await Authentication.signEmailToken(
+      customer,
+      "Customer"
+    );
+    await this.sendEmail({
+      setting: "ORDER_REFUNDED",
       subject: `Your order for ${this.businessName}.`,
-      text: "Refunded",
+      html: VendorOrderStatus.refunded(
+        customer.firstName,
+        customer.lastName,
+        vendorToken
+      ),
     });
-    await Communications.sendMail({
-      to: this.email,
+    await customer.sendEmail({
+      setting: "ORDER_REFUNDED",
       subject: `Order refunded!`,
-      text: "Refunded",
+      html: CustomerOrderStatus.refunded(this.businessName, customerToken),
     });
     return refundedOrder;
   } catch (error) {
-    return { error: { ...error, functionName: "refundOrder" } };
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "refundOrder" } };
   }
 };
 

@@ -1,15 +1,11 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const Driver = require("../models/driver");
-const Order = require("../models/order");
+
+const EmailConfirmationPages = require("../constants/static-pages/email-confirmation");
+const Authentication = require("../services/authentication");
 const Communications = require("../services/communications");
+const Driver = require("../models/driver");
 const logError = require("../services/errorLog");
-const {
-  signToken,
-  signEmailToken,
-  validateEmailToken,
-} = require("../services/authentication");
-const EmailConfirmation = require("../constants/static-pages/email-confirmation");
 
 const router = express.Router();
 
@@ -25,17 +21,18 @@ router
         phoneNumber,
       });
       const savedDriver = await newDriver.save();
-      const token = await signToken(savedDriver, "Driver");
-      const emailConfirmationToken = await signEmailToken(
+      const token = await Authentication.signToken(savedDriver, "Driver");
+      const EmailConfirmationPagesToken = await Authentication.signEmailToken(
         savedDriver,
         "Driver"
       );
       await savedDriver.sendEmail({
+        setting: "ACCOUNT",
         subject: `Thanks for signing up, ${firstName}!`,
-        html: EmailConfirmation.request(
+        html: EmailConfirmationPages.request(
           "drivers",
           firstName,
-          emailConfirmationToken
+          EmailConfirmationPagesToken
         ),
       });
       res.status(200).json({ token, profile: savedDriver, userType: "driver" });
@@ -62,7 +59,7 @@ router
           res
         );
       }
-      const token = await signToken(foundDriver, "Driver");
+      const token = await Authentication.signToken(foundDriver, "Driver");
       res.status(200).json({ token, profile: foundDriver, userType: "driver" });
     } catch (error) {
       return await logError(error, req, res);
@@ -70,7 +67,9 @@ router
   })
   .get("/confirmEmail", async (req, res) => {
     try {
-      const isEmailToken = await validateEmailToken(req.query.token);
+      const isEmailToken = await Authnentication.validateEmailToken(
+        req.query.token
+      );
       if (!req.user || !isEmailToken) {
         return await logError(
           { message: "Unauthorized", status: 401 },
@@ -80,7 +79,26 @@ router
       }
       req.user.emailIsConfirmed = true;
       await req.user.save();
-      res.status(200).send(EmailConfirmation.confirmed());
+      res.status(200).send(EmailConfirmationPages.confirmed());
+    } catch (error) {
+      return await logError(error, req, res);
+    }
+  })
+  .get("/unsubscribe", async (req, res) => {
+    try {
+      const isEmailToken = await Authnentication.validateEmailToken(
+        req.query.token
+      );
+      if (!req.user || !isEmailToken) {
+        return await logError(
+          { message: "Unauthorized", status: 401 },
+          req,
+          res
+        );
+      }
+      req.user.emailSettings[req.query.setting] = false;
+      await req.user.save();
+      res.status(200).send(EmailConfirmationPages.unsubscribed());
     } catch (error) {
       return await logError(error, req, res);
     }
@@ -103,15 +121,18 @@ router
   .post("/sendConfirmationEmail", async (req, res) => {
     try {
       const driver = req.user;
-      const emailConfirmationToken = await signEmailToken(driver, "Driver");
+      const EmailConfirmationPagesToken = await Authentication.signEmailToken(
+        driver,
+        "Driver"
+      );
       await Communications.sendmail({
         to: driver.email,
         from: process.env.EMAIL_USER,
         subject: `Thanks for signing up, ${driver.firstName}!`,
-        html: EmailConfirmation.request(
+        html: EmailConfirmationPages.request(
           "drivers",
           driver.firstName,
-          emailConfirmationToken
+          EmailConfirmationPagesToken
         ),
       });
       res.status(200).json({ success: true });

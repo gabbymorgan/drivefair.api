@@ -3,6 +3,8 @@ const { ObjectId } = mongoose.Schema.Types;
 
 const MenuItem = require("./menuItem");
 const Driver = require("./driver");
+const Authentication = require("../services/authentication");
+const CustomerOrderStatus = require("../constants/static-pages/customer-order-status");
 
 const orderItemSchema = new mongoose.Schema({
   menuItem: {
@@ -143,7 +145,7 @@ orderSchema.methods.requestDrivers = async function (driverIds) {
           updatedOrder.disposition = "ACCEPTED_BY_VENDOR";
         }
         await updatedOrder.save();
-      }, 30000);
+      }, 60000);
       return {
         driverId,
         success: true,
@@ -254,8 +256,13 @@ orderSchema.methods.driverDeliverOrder = async function (driverId) {
     await customer.save();
     await vendor.save();
     await customer.sendEmail({
+      setting: "ORDER_DELIVERED",
       subject: "Your order has arrived!",
-      text: "Go and get it!",
+      html: CustomerOrderStatus.delivered(
+        customer.firstName,
+        vendor.businessName,
+        await Authentication.signEmailToken(customer, "Customer")
+      ),
     });
     await driver
       .populate({

@@ -1,6 +1,15 @@
 const { validateToken } = require("./authentication");
 const logError = require("./errorLog");
 const ActivityLog = require("../models/activityLog");
+const Vendor = require("../models/vendor");
+const Customer = require("../models/customer");
+const Driver = require("../models/driver");
+
+const models = {
+  Vendor,
+  Customer,
+  Driver,
+};
 
 const jwtMiddleware = async (req, res, next) => {
   try {
@@ -11,12 +20,13 @@ const jwtMiddleware = async (req, res, next) => {
     ) {
       req.user = await validateToken(
         req.headers.authorization.split(" ")[1],
+        models,
         req,
         res
       );
     } else {
       const token = req.query.token || req.body.token;
-      if (token) req.user = await validateToken(token, req, res);
+      if (token) req.user = await validateToken(token, models, req, res);
     }
     if (req.user && req.user.error) {
       return res.status(401).json({ errorMessage: "Unauthorized" });

@@ -4,7 +4,7 @@ const Payment = require("../../server/services/payment");
 const chaiHttp = require("chai-http");
 
 const app = require("../../app");
-const users = require("../dummyData/users.json");
+const users = require("../dummyData/singleUser.json");
 const Vendor = require("../../server/models/vendor");
 const MenuItem = require("../../server/models/menuItem");
 

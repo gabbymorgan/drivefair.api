@@ -69,6 +69,13 @@ app.use("/settings", settingsRouter);
 app.use("/drivers", driverRouter);
 app.use("/route", routeRouter);
 
+app.get("/unsubscribe", async (req, res) => {
+  const { token, setting } = req.query;
+  res.redirect(
+    `/${req.userModel}s/unsubscribe?token=${token}&setting=${setting}`
+  );
+});
+
 app.get("/", async (req, res) => {
   res.status(200).json("Hello squirrel");
   await Communications.sendMail({

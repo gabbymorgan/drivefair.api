@@ -1,33 +1,48 @@
-const nodemailer = require("nodemailer");
+// const nodemailer = require("nodemailer");
 const admin = require("firebase-admin");
+const sgMail = require("@sendgrid/mail");
 
-const emailTransporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE,
-  host: process.env.EMAIL_HOST,
-  secureConnection: false,
-  port: 465,
-
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-
-  tls: {
-    ciphers: process.env.EMAIL_CIPHERS,
-  },
-});
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendMail = async ({ to, subject, text, html }) => {
-  return process.env.NODE_ENV === "production"
-    ? await emailTransporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to,
-        subject,
-        text,
-        html,
-      })
-    : true;
+  const msg = {
+    to,
+    from: process.env.EMAIL_USER,
+    subject,
+    text,
+    html,
+  };
+  return process.env.NODE_ENV === "production" ? await sgMail.send(msg) : {};
 };
+
+//  Nodemailer version in case we need to jump ship from SendGrid
+// const emailTransporter = nodemailer.createTransport({
+//   service: process.env.EMAIL_SERVICE,
+//   host: process.env.EMAIL_HOST,
+//   secureConnection: false,
+//   port: 465,
+
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASSWORD,
+//   },
+
+//   tls: {
+//     ciphers: process.env.EMAIL_CIPHERS,
+//   },
+// });
+
+// const sendMail = async ({ to, subject, text, html }) => {
+//   return process.env.NODE_ENV === "production"
+//     ? await emailTransporter.sendMail({
+//         from: process.env.EMAIL_USER,
+//         to,
+//         subject,
+//         text,
+//         html,
+//       })
+//     : true;
+// };
 
 const sendPushNotification = async ({ deviceTokens, title, body, data }) => {
   const message = await admin.messaging().sendToDevice(
