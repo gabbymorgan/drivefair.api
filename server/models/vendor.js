@@ -398,19 +398,21 @@ vendorSchema.methods.refundOrder = async function (orderId) {
       );
       return { error: { errorString, functionName: "refundOrder" } };
     }
-    order.disposition = "CANCELED";
-    customer.activeOrders.pull(orderId);
-    customer.readyOrders.pull(orderId);
-    customer.orderHistory.push(orderId);
-    this.activeOrders.pull(orderId);
-    this.readyOrders.pull(orderId);
-    this.orderHistory.push(orderId);
-    if (driver) {
-      driver.orders.pull(orderId);
-      driver.orderHistory.push(orderId);
-      await driver.save();
-      await driver.notifyOrderCanceled({ vendor: this, order });
+    if (order.disposition !== "DELIVERED") {
+      customer.activeOrders.pull(orderId);
+      customer.readyOrders.pull(orderId);
+      customer.orderHistory.push(orderId);
+      this.activeOrders.pull(orderId);
+      this.readyOrders.pull(orderId);
+      this.orderHistory.push(orderId);
+      if (driver) {
+        driver.orders.pull(orderId);
+        driver.orderHistory.push(orderId);
+        await driver.save();
+        await driver.notifyOrderCanceled({ vendor: this, order });
+      }
     }
+    order.disposition = "CANCELED";
     await customer.save();
     await this.save();
     const refundedOrder = await order.save();
