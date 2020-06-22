@@ -33,6 +33,11 @@ const messageSchema = new mongoose.Schema({
   results: [Object],
   multicastId: String,
   successCount: Number,
+  messageType: {
+    type: String,
+    enums: ["CHAT", "DRIVER_REQUEST", "ORDER_READY", "ORDER_CANCELED"],
+    required: true,
+  },
 });
 
 messageSchema.pre("save", async function () {

@@ -69,6 +69,7 @@ const vendorSchema = new mongoose.Schema({
       ORDER_PAID: true,
       ORDER_DELIVERED: true,
       ORDER_REFUNDED: true,
+      CHAT: true,
     },
   },
   notificationSettings: { type: Object, default: {} },
@@ -108,7 +109,7 @@ vendorSchema.methods.sendEmail = async function ({
   }
 };
 
-vendorSchema.methods.sendPushNotification = async function ({
+vendorSchema.methods.sendMessage = async function ({
   setting,
   title,
   body,
@@ -116,25 +117,34 @@ vendorSchema.methods.sendPushNotification = async function ({
   senderId,
   senderModel,
 }) {
-  if (setting && this.notificationSettings[setting]) {
-    const message = new Message({
-      recipient: this._id,
-      recipientModel: "Vendor",
-      sender: senderId,
-      senderModel,
-      title,
-      body,
-      data,
-      deviceTokens: this.deviceTokens,
-    });
-    return await message.save();
+  try {
+    if (setting && this.notificationSettings[setting]) {
+      const message = new Message({
+        messageType: data.messageType,
+        recipient: this._id,
+        recipientModel: "Vendor",
+        sender: senderId,
+        senderModel,
+        title,
+        body,
+        data,
+        deviceTokens: this.deviceTokens,
+      });
+      return await message.save();
+    }
+    return {
+      error: {
+        message: `Driver has turned off notification setting: ${setting}`,
+        status: 200,
+      },
+    };
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendMessage", status: 200 } };
   }
-  return {
-    error: {
-      message: `Driver has turned off notification setting: ${setting}`,
-      status: 200,
-    },
-  };
 };
 
 vendorSchema.methods.editVendor = async function (changes) {
