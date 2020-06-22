@@ -45,6 +45,7 @@ const customerSchema = new mongoose.Schema({
       ORDER_PAID: true,
       ORDER_DELIVERED: true,
       ORDER_REFUNDED: true,
+      CHAT: true,
     },
   },
   notificationSettings: { type: Object, default: {} },
@@ -84,7 +85,7 @@ customerSchema.methods.sendEmail = async function ({
   }
 };
 
-customerSchema.methods.sendPushNotification = async function ({
+customerSchema.methods.sendMessage = async function ({
   setting,
   title,
   body,
@@ -95,6 +96,7 @@ customerSchema.methods.sendPushNotification = async function ({
   try {
     if (setting && this.notificationSettings[setting]) {
       const message = new Message({
+        messageType: data.messageType,
         recipient: this._id,
         recipientModel: "Customer",
         sender: senderId,
@@ -117,7 +119,7 @@ customerSchema.methods.sendPushNotification = async function ({
       error,
       Object.getOwnPropertyNames(error)
     );
-    return { error: { errorString, functionName: "sendPushNotification" } };
+    return { error: { errorString, functionName: "sendMessage" } };
   }
 };
 

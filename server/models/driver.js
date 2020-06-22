@@ -32,7 +32,10 @@ const driverSchema = new mongoose.Schema({
   status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "INACTIVE" },
   deviceTokens: [String],
   emailSettings: { type: Object, default: {} },
-  notificationSettings: { type: Object, default: { REQUEST_DRIVER: true } },
+  notificationSettings: {
+    type: Object,
+    default: { REQUEST_DRIVER: true, CHAT: true },
+  },
   orders: [{ type: ObjectId, ref: "Order" }],
 });
 
@@ -70,7 +73,7 @@ driverSchema.methods.sendEmail = async function ({
   }
 };
 
-driverSchema.methods.sendPushNotification = async function ({
+driverSchema.methods.sendMessage = async function ({
   setting,
   title,
   body,
@@ -78,25 +81,34 @@ driverSchema.methods.sendPushNotification = async function ({
   senderId,
   senderModel,
 }) {
-  if (setting && this.notificationSettings[setting]) {
-    const message = new Message({
-      recipient: this._id,
-      recipientModel: "Driver",
-      sender: senderId,
-      senderModel,
-      title,
-      body,
-      data,
-      deviceTokens: this.deviceTokens,
-    });
-    return await message.save();
+  try {
+    if (setting && this.notificationSettings[setting]) {
+      const message = new Message({
+        messageType: data.messageType,
+        recipient: this._id,
+        recipientModel: "Driver",
+        sender: senderId,
+        senderModel,
+        title,
+        body,
+        data,
+        deviceTokens: this.deviceTokens,
+      });
+      return await message.save();
+    }
+    return {
+      error: {
+        message: `Driver has turned off notification setting: ${setting}`,
+        status: 200,
+      },
+    };
+  } catch (error) {
+    const errorString = JSON.stringify(
+      error,
+      Object.getOwnPropertyNames(error)
+    );
+    return { error: { errorString, functionName: "sendMessage", status: 200 } };
   }
-  return {
-    error: {
-      message: `Driver has turned off notification setting: ${setting}`,
-      status: 200,
-    },
-  };
 };
 
 driverSchema.methods.toggleStatus = async function (status) {
@@ -155,7 +167,7 @@ driverSchema.methods.requestDriver = async function (order) {
       customerAddress: getAddressString(order.address),
       tip: order.tip.toString(),
     };
-    return await this.sendPushNotification({
+    return await this.sendMessage({
       setting: "REQUEST_DRIVER",
       title,
       body,
@@ -174,7 +186,7 @@ driverSchema.methods.requestDriver = async function (order) {
 
 driverSchema.methods.notifyOrderReady = async function ({ vendor, order }) {
   try {
-    await this.sendPushNotification({
+    await this.sendMessage({
       setting: "REQUEST_DRIVER",
       title: `Order up!`,
       body: `The order at ${vendor.businessName} is ready.`,
@@ -197,7 +209,7 @@ driverSchema.methods.notifyOrderReady = async function ({ vendor, order }) {
 
 driverSchema.methods.notifyOrderCanceled = async function ({ vendor, order }) {
   try {
-    await this.sendPushNotification({
+    await this.sendMessage({
       setting: "REQUEST_DRIVER",
       title: "Order canceled.",
       body: `The order for ${vendor.businessName} has been canceled.`,
