@@ -10,7 +10,7 @@ const Vendor = require("../../server/models/vendor");
 chai.use(chaiHttp);
 const { expect } = chai;
 
-describe("Menu Items", function () {
+module.exports = function suite() {
   it("adds menu items", async function () {
     const requests = users.vendors.map(async (vendor) => {
       const { email, password } = vendor;
@@ -29,4 +29,4 @@ describe("Menu Items", function () {
     });
     await Promise.all(requests);
   });
-});
+};

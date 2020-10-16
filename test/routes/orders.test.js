@@ -11,7 +11,7 @@ const MenuItem = require("../../server/models/menuItem");
 chai.use(chaiHttp);
 const { expect } = chai;
 
-describe("Pickup Orders", function () {
+module.exports = function suite() {
   let expectedOrderItemsLength = 0;
   it("adds orders to cart", async function () {
     const requests = () => {
@@ -127,9 +127,6 @@ describe("Pickup Orders", function () {
     });
     await Promise.all(requests);
   });
-});
-
-describe("Delivery Orders", function () {
   const address = {
     street: "1234 Fake St",
     unit: "10",
@@ -137,9 +134,8 @@ describe("Delivery Orders", function () {
     state: "TX",
     zip: "76201",
   };
-  let expectedOrderItemsLength = 0;
-  let expectedAddressesLength = 0;
   it("adds orders to cart", async function () {
+    expectedOrderItemsLength = 0;
     const requests = () => {
       expectedOrderItemsLength++;
       return users.customers.map(async (customer, index) => {
@@ -200,7 +196,7 @@ describe("Delivery Orders", function () {
   });
   it("creates address for customer", async () => {
     const requests = () => {
-      expectedAddressesLength++;
+      expectedAddressesLength = 1;
       return users.customers.map(async (customer) => {
         const response = await chai
           .request(app)
@@ -253,4 +249,4 @@ describe("Delivery Orders", function () {
     });
     await Promise.all(requests);
   });
-});
+};
