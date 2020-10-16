@@ -2,6 +2,8 @@ const express = require("express");
 const logError = require("../services/errorLog");
 const Order = require("../models/order");
 const Driver = require("../models/driver");
+const Vendor = require("../models/vendor");
+const Customer = require("../models/customer");
 
 const router = express.Router();
 
@@ -254,9 +256,38 @@ router
       return await logError(error, req, res);
     }
   })
-  .post("/arriveForPickup", async (req, res) => {
-    // mvake this a push notification or something and NOT a disposition
+  .post("/sendChatMessage", async (req, res) => {
+    const models = {
+      Driver,
+      Vendor,
+      Customer,
+    };
+    const { user, userModel } = req;
+    const { recipientId, recipientModel, orderId, chatMessage } = req.body;
+    const fromName = user.firstName
+      ? user.firstName + customer.lastName[0]
+      : user.businessName;
+    const recipient = models[recipientModel].findById(recipientId);
+    const response = await recipient.sendMessage({
+      title: `New message from ${fromName}!`,
+      body: chatMessage,
+      data: {
+        messageType: "CHAT",
+        fromName,
+        fromModel: userModel,
+        fromId: user._id,
+        orderId,
+      },
+      senderId,
+      senderModel,
+    });
+    if (response.error) {
+      return await logError(response.error, req, res);
+    }
+    res.status(200).json({ response });
   })
+  .get("/chat", (req, res) => {})
+  .post("/arriveForPickup", async (req, res) => {})
   .post("/updatePayment", async (req, res) => {});
 
 module.exports = router;

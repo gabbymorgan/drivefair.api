@@ -19,10 +19,12 @@ const dbUrls = {
     process.env.DB_USER +
     ":" +
     process.env.DB_PASS +
-    "@cluster0-h73bz.mongodb.net/" +
-    process.env.DB_CLUSTER +
+    "@cluster0.sixxb.mongodb.net/" +
+    process.env.DB_NAME +
     "?retryWrites=true&w=majority",
 };
+
+console.log(dbUrls["production"]);
 
 before(async () => {
   requester = await chai.request(app).keepOpen();
@@ -30,7 +32,7 @@ before(async () => {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   });
-  await mongoose.connection.db.dropDatabase();
+  await mongoose.connection.dropDatabase();
 });
 
 after(() => {
@@ -60,7 +62,7 @@ const combineAddress = (userData) => {
   };
 };
 
-describe("Users", function () {
+module.exports = function suite() {
   it("adds vendors", async function () {
     const requests = users.vendors.map(async (vendor) => {
       const address = combineAddress(vendor);
@@ -109,4 +111,4 @@ describe("Users", function () {
     });
     await Promise.all(requests);
   });
-});
+};

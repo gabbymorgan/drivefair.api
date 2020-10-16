@@ -25,7 +25,7 @@ admin.initializeApp({
   databaseURL: "https://delivery-2a108.firebaseio.com",
 });
 
-dbUrls = {
+const dbUrls = {
   development: "mongodb://127.0.0.1:27017/delivery",
   test: "mongodb://127.0.0.1:27017/delivery",
   production:
@@ -33,8 +33,8 @@ dbUrls = {
     process.env.DB_USER +
     ":" +
     process.env.DB_PASS +
-    "@cluster0-h73bz.mongodb.net/" +
-    process.env.DB_CLUSTER +
+    "@cluster0.sixxb.mongodb.net/" +
+    process.env.DB_NAME +
     "?retryWrites=true&w=majority",
 };
 

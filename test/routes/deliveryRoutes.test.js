@@ -10,7 +10,7 @@ const Driver = require("../../server/models/driver");
 chai.use(chaiHttp);
 const { expect } = chai;
 
-describe("Driver Request", function () {
+module.exports = function suite() {
   const vendor = users.vendors[0];
   const driver = users.drivers[0];
   let orderId;
@@ -217,4 +217,4 @@ describe("Driver Request", function () {
     expect(response, "Response is status 200").to.have.status(200);
     expect(response.body, "Response has no error").to.not.have.key("error");
   });
-});
+};
