@@ -23,7 +23,7 @@
   "homepage": "https://github.com/runranron/delivery-app.api#readme",
   "dependencies": {
     "@sendgrid/mail": "^7.1.1",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "bcrypt": "^5.0.0",
     "chai": "^4.2.0",
     "chai-http": "^4.3.0",
