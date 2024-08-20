@@ -49,6 +49,7 @@ const customerSchema = new mongoose.Schema({
     },
   },
   notificationSettings: { type: Object, default: {} },
+  isWobbly: {type: Boolean}
 });
 
 customerSchema.methods.validatePassword = async function (password) {
@@ -314,5 +315,10 @@ customerSchema.methods.editAddress = async function (addressId, changes) {
     return { error: { errorString, functionName: "editAddress" } };
   }
 };
+
+customerSchema.methods.makeCustomerWobbly = async function () {
+  this.isWobbly = true;
+  await this.save();
+}
 
 module.exports = mongoose.model("Customer", customerSchema);
